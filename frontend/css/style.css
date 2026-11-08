@@ -48,6 +48,20 @@ body {
   background: #f1f5f9;
 }
 
+/* Hide API server status and mock controls completely */
+#backend-status-card,
+#btn-open-server-config,
+#btn-toggle-mock,
+#server-status-pill,
+#current-api-endpoint {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
