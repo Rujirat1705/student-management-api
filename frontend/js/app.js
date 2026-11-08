@@ -5,12 +5,6 @@
  * และการประสานงานกับ api.js
  */
 
-// ล้างสถานะ Mock และบังคับปิดโหมด Mock ทันที
-localStorage.setItem('sms_use_mock_mode', 'false');
-if (window.smsApi) {
-  window.smsApi.isMockMode = false;
-}
-
 // =================== STATE MANAGEMENT ===================
 const appState = {
   currentTab: 'dashboard',
@@ -31,8 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initEventListeners();
   updateAuthUI();
 
-  // เชื่อมต่อ Backend API อัตโนมัติ (ไม่เปิดโหมด Mock Demo)
-  window.smsApi.setMockMode(false);
+  // เชื่อมต่อ Backend API อัตโนมัติ (ล้างโหมด Mock ถาวร)
+  localStorage.removeItem('sms_use_mock_mode');
+  window.smsApi.isMockMode = false;
   try {
     await window.smsApi.checkServerHealth();
   } catch (e) {
@@ -1242,10 +1237,6 @@ async function populateEnrollmentDropdowns() {
 
 // =================== UI HELPERS ===================
 function updateServerStatusUI() {
-  const card = document.getElementById('backend-status-card');
-  if (card) {
-    card.remove();
-  }
   const pill = document.getElementById('server-status-pill');
   const endpoint = document.getElementById('current-api-endpoint');
   const mockText = document.getElementById('mock-status-text');
@@ -1261,17 +1252,18 @@ function updateServerStatusUI() {
   if (redocLink) redocLink.href = `${window.smsApi.baseUrl}/api/redoc/`;
   if (schemaLink) schemaLink.href = `${window.smsApi.baseUrl}/api/schema/`;
 
-  if (pill) {
-    if (window.smsApi.isMockMode) {
-      pill.className = 'flex items-center gap-1.5 font-semibold text-amber-600 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200';
-      pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 pulse-mock"></span> โหมดจำลอง Mock';
-    } else if (window.smsApi.isServerOnline) {
-      pill.className = 'flex items-center gap-1.5 font-semibold text-emerald-600 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200';
-      pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 pulse-online"></span> เซิร์ฟเวอร์ออนไลน์';
-    } else {
-      pill.className = 'flex items-center gap-1.5 font-semibold text-rose-600 text-[11px] bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200';
-      pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span> เซิร์ฟเวอร์ออฟไลน์';
-    }
+  // Status pill is hidden — no need to update its style
+  if (!pill) return;
+
+  if (window.smsApi.isMockMode) {
+    pill.className = 'flex items-center gap-1.5 font-semibold text-amber-600 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200';
+    pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 pulse-mock"></span> โหมดจำลอง Mock';
+  } else if (window.smsApi.isServerOnline) {
+    pill.className = 'flex items-center gap-1.5 font-semibold text-emerald-600 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200';
+    pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 pulse-online"></span> เซิร์ฟเวอร์ออนไลน์';
+  } else {
+    pill.className = 'flex items-center gap-1.5 font-semibold text-rose-600 text-[11px] bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200';
+    pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span> เซิร์ฟเวอร์ออฟไลน์';
   }
 }
 

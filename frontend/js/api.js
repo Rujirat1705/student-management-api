@@ -27,7 +27,7 @@ class ApiService {
     this.user = JSON.parse(localStorage.getItem(API_STORAGE_KEYS.USER_DATA) || 'null');
     // เชื่อมต่อ API อัตโนมัติ ปิดโหมด Mock ถาวร
     this.isMockMode = false;
-    localStorage.setItem(API_STORAGE_KEYS.USE_MOCK, 'false');
+    localStorage.removeItem(API_STORAGE_KEYS.USE_MOCK);
     this.isServerOnline = false;
   }
 
@@ -41,8 +41,8 @@ class ApiService {
   }
 
   setMockMode(enable) {
-    this.isMockMode = false;
-    localStorage.setItem(API_STORAGE_KEYS.USE_MOCK, 'false');
+    this.isMockMode = false; // ล็อกให้เป็น false เสมอ (ไม่เปิด Mock)
+    localStorage.removeItem(API_STORAGE_KEYS.USE_MOCK);
   }
 
   saveAuthTokens(tokens, userData = null) {
