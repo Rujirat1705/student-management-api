@@ -64,6 +64,11 @@ class ApiService {
     return !!this.accessToken;
   }
 
+  isAdmin() {
+    if (!this.user) return false;
+    return this.user.is_staff === true || this.user.username === 'admin';
+  }
+
   async checkServerHealth() {
     try {
       const controller = new AbortController();

@@ -179,6 +179,7 @@ function initEventListeners() {
   document.getElementById('btn-logout').addEventListener('click', () => {
     window.smsApi.clearAuth();
     updateAuthUI();
+    switchTab(appState.currentTab);
     showToast('info', 'ออกจากระบบเรียบร้อยแล้ว');
   });
 
@@ -191,6 +192,7 @@ function initEventListeners() {
       await window.smsApi.login(u, p);
       closeModal('modal-login');
       updateAuthUI();
+      switchTab(appState.currentTab);
       showToast('success', `ยินดีต้อนรับคุณ ${u}! เข้าสู่ระบบสำเร็จ`);
     } catch (err) {
       Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
@@ -204,6 +206,12 @@ function initEventListeners() {
     const p2 = document.getElementById('reg-password-confirm').value;
     if (p1 !== p2) {
       return Swal.fire('รหัสผ่านไม่ตรงกัน', 'กรุณากรอกยืนยันรหัสผ่านให้ตรงกัน', 'warning');
+    }
+    if (p1.length < 8) {
+      return Swal.fire('รหัสผ่านสั้นเกินไป', 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร', 'warning');
+    }
+    if (!/[a-zA-Z]/.test(p1)) {
+      return Swal.fire('รูปแบบรหัสผ่านไม่ถูกต้อง', 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว', 'warning');
     }
     const data = {
       username: document.getElementById('reg-username').value,
@@ -490,6 +498,31 @@ function renderDashboardCharts(data) {
   }
 }
 
+// ค้นหานักศึกษาที่ตรงกับผู้ใช้งานปัจจุบัน (สำหรับมุมมองนักศึกษา)
+function findStudentForCurrentUser(studentsList) {
+  const user = window.smsApi.user;
+  if (!user || !studentsList || studentsList.length === 0) return null;
+  const userEmail = (user.email || '').toLowerCase().trim();
+  const userName = (user.username || '').toLowerCase().trim();
+  const userFirst = (user.first_name || '').toLowerCase().trim();
+
+  // 1. ตรวจสอบจาก email
+  let found = studentsList.find(s => s.email && s.email.toLowerCase().trim() === userEmail);
+  // 2. ตรวจสอบจาก student_id ตรงกับ username
+  if (!found) {
+    found = studentsList.find(s => s.student_id && s.student_id.toLowerCase().trim() === userName);
+  }
+  // 3. ตรวจสอบจากชื่อจริง
+  if (!found && userFirst) {
+    found = studentsList.find(s => s.first_name && s.first_name.toLowerCase().trim() === userFirst);
+  }
+  // 4. บัญชีทดสอบ student1 -> ผูกกับนักศึกษาคนแรก (66010001 ภานุพงศ์ มณีโรจน์)
+  if (!found && (userName.startsWith('student') || userName === 'student1')) {
+    found = studentsList.find(s => s.student_id === '66010001') || studentsList[0];
+  }
+  return found || studentsList[0];
+}
+
 async function loadStudents() {
   const tbody = document.getElementById('student-table-body');
   tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">กำลังโหลดข้อมูลนักศึกษา...</td></tr>';
@@ -507,8 +540,45 @@ async function loadStudents() {
 
   try {
     const res = await window.smsApi.getStudents(params);
-    const students = res.results || res;
+    let students = res.results || res;
     appState.students = students;
+
+    const isAdmin = window.smsApi.isAdmin();
+    const isAuth = window.smsApi.isAuthenticated();
+
+    // ลบ Banner แจ้งเตือนเดิมถ้ามี
+    const existingBanner = document.getElementById('student-view-banner');
+    if (existingBanner) existingBanner.remove();
+
+    // ถ้าเข้าสู่ระบบในฐานะนักศึกษา (ไม่ใช่แอดมิน) ให้แสดงเฉพาะข้อมูลของตัวเองเท่านั้น!
+    if (isAuth && !isAdmin) {
+      const myStudent = findStudentForCurrentUser(students);
+      if (myStudent) {
+        students = [myStudent];
+      }
+      // สร้าง Banner สวยงามบอกให้รู้ว่าเป็นมุมมองนักศึกษา
+      const banner = document.createElement('div');
+      banner.id = 'student-view-banner';
+      banner.className = 'mb-4 p-4 bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 border border-indigo-200/80 text-indigo-900 rounded-2xl text-xs flex items-center justify-between shadow-xs';
+      banner.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm shadow-xs">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <div>
+            <p class="font-bold text-slate-900 text-sm">มุมมองนักศึกษา: แสดงเฉพาะข้อมูลของคุณ (${myStudent ? myStudent.full_name : 'นักศึกษา'})</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">คุณสามารถคลิกที่ชื่อเพื่อดูรายละเอียดผลการเรียนรายวิชาทั้งหมดได้</p>
+          </div>
+        </div>
+        <span class="text-[11px] bg-white text-indigo-700 font-bold px-3 py-1 rounded-full border border-indigo-100 shadow-2xs">
+          Student View
+        </span>
+      `;
+      const tableCard = tbody.closest('.glass-card');
+      if (tableCard && tableCard.parentNode) {
+        tableCard.parentNode.insertBefore(banner, tableCard);
+      }
+    }
 
     if (students.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400 font-medium">ไม่พบข้อมูลนักศึกษาที่ตรงตามเงื่อนไข</td></tr>';
@@ -531,17 +601,40 @@ async function loadStudents() {
 
       const initials = (s.first_name || '').charAt(0) + (s.last_name || '').charAt(0);
 
+      // ปุ่มการจัดการ: แอดมินทำได้ครบทุกอย่าง, นักศึกษาดูได้อย่างเดียว
+      const actionButtons = isAdmin
+        ? `
+          <button onclick="viewStudentDetail(${s.id})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="ดูผลการเรียนและคำนวณ GPA">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+          <button onclick="editStudent(${s.id})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="แก้ไขข้อมูล">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button onclick="deleteStudent(${s.id}, '${s.student_id}', '${s.first_name}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ลบข้อมูล">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        `
+        : `
+          <button onclick="viewStudentDetail(${s.id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs transition" title="ดูผลการเรียนของคุณ">
+            <i class="fa-solid fa-eye"></i>
+            <span>ดูข้อมูล</span>
+          </button>
+        `;
+
       return `
         <tr class="hover:bg-slate-50/70 transition">
           <td class="py-3 px-4">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+              <button type="button" onclick="viewStudentDetail(${s.id})" class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-100 to-violet-100 text-indigo-700 font-bold flex items-center justify-center text-xs hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition cursor-pointer" title="คลิกเพื่อดูข้อมูลทั้งหมด">
                 ${initials || 'ST'}
-              </div>
-              <div>
-                <p class="font-bold text-slate-800">${s.title || ''}${s.first_name} ${s.last_name}</p>
+              </button>
+              <button type="button" onclick="viewStudentDetail(${s.id})" class="text-left group cursor-pointer focus:outline-none" title="คลิกเพื่อดูข้อมูลทั้งหมด">
+                <p class="font-bold text-slate-800 group-hover:text-indigo-600 group-hover:underline transition flex items-center gap-1.5">
+                  <span>${s.title || ''}${s.first_name} ${s.last_name}</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400 group-hover:text-indigo-600 transition"></i>
+                </p>
                 <p class="text-[11px] text-slate-400 font-mono">${s.student_id}</p>
-              </div>
+              </button>
             </div>
           </td>
           <td class="py-3 px-4">
@@ -565,15 +658,7 @@ async function loadStudents() {
           </td>
           <td class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-1.5">
-              <button onclick="viewStudentDetail(${s.id})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="ดูผลการเรียนและคำนวณ GPA">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-              <button onclick="editStudent(${s.id})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="แก้ไขข้อมูล">
-                <i class="fa-solid fa-pen-to-square"></i>
-              </button>
-              <button onclick="deleteStudent(${s.id}, '${s.student_id}', '${s.first_name}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ลบข้อมูล">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
+              ${actionButtons}
             </div>
           </td>
         </tr>
@@ -694,7 +779,24 @@ async function loadCourses() {
       return;
     }
 
-    container.innerHTML = courses.map(c => `
+    const isAdmin = window.smsApi.isAdmin();
+
+    container.innerHTML = courses.map(c => {
+      // ปุ่มแก้ไข/ลบรายวิชา ให้เฉพาะแอดมินเท่านั้น
+      const adminActions = isAdmin
+        ? `
+          <div class="flex items-center gap-1">
+            <button onclick="editCourse(${c.id})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="แก้ไขวิชา">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="deleteCourse(${c.id}, '${c.course_code}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ลบวิชา">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `
+        : '';
+
+      return `
       <div class="glass-card p-5 rounded-2xl flex flex-col justify-between border border-slate-200">
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -714,17 +816,11 @@ async function loadCourses() {
             <p class="text-[11px] text-slate-400">อาจารย์ผู้สอน</p>
             <p class="font-medium text-slate-700">${c.instructor_name || 'ยังไม่กำหนด'}</p>
           </div>
-          <div class="flex items-center gap-1">
-            <button onclick="editCourse(${c.id})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="แก้ไขวิชา">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteCourse(${c.id}, '${c.course_code}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ลบวิชา">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
+          ${adminActions}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     container.innerHTML = `<div class="col-span-3 py-8 text-center text-rose-500">เกิดข้อผิดพลาด: ${err.message}</div>`;
   }
@@ -780,7 +876,18 @@ async function loadEnrollments() {
 
   try {
     const res = await window.smsApi.getEnrollments(params);
-    const enrollments = res.results || res;
+    let enrollments = res.results || res;
+
+    const isAdmin = window.smsApi.isAdmin();
+    const isAuth = window.smsApi.isAuthenticated();
+
+    // หากล็อกอินเป็นนักศึกษา ให้เห็นเฉพาะวิชาที่ตัวเองลงทะเบียนไว้เท่านั้น!
+    if (isAuth && !isAdmin) {
+      const myStudent = findStudentForCurrentUser(appState.students);
+      if (myStudent) {
+        enrollments = enrollments.filter(e => e.student === myStudent.id || e.student_code === myStudent.student_id);
+      }
+    }
     appState.enrollments = enrollments;
 
     if (enrollments.length === 0) {
@@ -789,7 +896,24 @@ async function loadEnrollments() {
     }
 
     tbody.innerHTML = enrollments.map(e => {
-      const gradeBadge = e.grade ? `<span class="inline-block bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs border border-indigo-200">${e.grade}</span>` : '<span class="text-slate-400">-</span>';
+      const gradeBadge = e.grade ? `<span class="inline-block bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded text-xs border border-indigo-200">${e.grade}</span>` : '<span class="text-slate-400 font-medium">รอการตัดเกรด</span>';
+
+      // ปุ่มตัดเกรด: มีให้เฉพาะแอดมินหรืออาจารย์เท่านั้น! นักศึกษาไม่สามารถตัดเกรดตัวเองได้
+      const actionCell = isAdmin
+        ? `
+          <div class="flex items-center justify-end gap-1.5">
+            <button onclick="openGradeModal(${e.id}, '${e.student_name}', '${e.course_code} ${e.course_name}', '${e.grade || ''}', '${e.status}')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition" title="ตัดเกรด">
+              <i class="fa-solid fa-pen-nib mr-1"></i> ตัดเกรด
+            </button>
+            <button onclick="deleteEnrollment(${e.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="ยกเลิกการลงทะเบียน">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `
+        : `
+          <span class="text-xs text-slate-400 font-medium"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>ลงทะเบียนแล้ว</span>
+        `;
+
       return `
         <tr class="hover:bg-slate-50 transition">
           <td class="py-3 px-4">
@@ -809,14 +933,7 @@ async function loadEnrollments() {
             </span>
           </td>
           <td class="py-3 px-4 text-right">
-            <div class="flex items-center justify-end gap-1.5">
-              <button onclick="openGradeModal(${e.id}, '${e.student_name}', '${e.course_code} ${e.course_name}', '${e.grade || ''}', '${e.status}')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition" title="ตัดเกรด">
-                <i class="fa-solid fa-pen-nib mr-1"></i> ตัดเกรด
-              </button>
-              <button onclick="deleteEnrollment(${e.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="ยกเลิกการลงทะเบียน">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </div>
+            ${actionCell}
           </td>
         </tr>
       `;
@@ -975,15 +1092,36 @@ function updateAuthUI() {
   const username = document.getElementById('auth-username');
   const role = document.getElementById('auth-role');
 
-  if (window.smsApi.isAuthenticated()) {
+  const btnAddStudent = document.getElementById('btn-add-student');
+  const btnAddCourse = document.getElementById('btn-add-course');
+  const btnAddEnrollment = document.getElementById('btn-add-enrollment');
+
+  const isAdmin = window.smsApi.isAdmin();
+  const isAuth = window.smsApi.isAuthenticated();
+
+  if (isAuth) {
     btnLogin.classList.add('hidden');
     badge.classList.remove('hidden');
     const user = window.smsApi.user;
     username.textContent = user ? (user.username || 'User') : 'User';
-    role.textContent = (user && user.is_staff) ? 'Administrator' : 'Student/User';
+    role.textContent = isAdmin ? 'Administrator (ผู้ดูแลระบบ)' : 'Student (นักศึกษา)';
   } else {
     btnLogin.classList.remove('hidden');
     badge.classList.add('hidden');
+  }
+
+  // ซ่อนปุ่มสิทธิ์ระดับแอดมินถ้าล็อกอินเป็นนักศึกษา
+  if (btnAddStudent) {
+    if (isAdmin) btnAddStudent.classList.remove('hidden');
+    else btnAddStudent.classList.add('hidden');
+  }
+  if (btnAddCourse) {
+    if (isAdmin) btnAddCourse.classList.remove('hidden');
+    else btnAddCourse.classList.add('hidden');
+  }
+  if (btnAddEnrollment) {
+    if (isAdmin) btnAddEnrollment.classList.remove('hidden');
+    else btnAddEnrollment.classList.add('hidden');
   }
 }
 

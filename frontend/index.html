@@ -601,8 +601,8 @@
 
       <form id="form-register" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Username *</label>
-          <input id="reg-username" type="text" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Username (ชื่อเล่น) *</label>
+          <input id="reg-username" type="text" placeholder="เช่น oat, ploy, student1" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -620,11 +620,12 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน *</label>
-          <input id="reg-password" type="password" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          <input id="reg-password" type="password" required minlength="8" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          <p class="text-[11px] text-indigo-600 mt-1 font-medium"><i class="fa-solid fa-circle-info mr-1"></i>ต้องมีตัวอักษรอย่างน้อย 1 ตัว และความยาวอย่างน้อย 8 ตัวอักษร</p>
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่าน *</label>
-          <input id="reg-password-confirm" type="password" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          <input id="reg-password-confirm" type="password" required minlength="8" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
         </div>
         <div class="flex items-center justify-between text-xs pt-2">
           <button type="button" onclick="openModal('modal-login'); closeModal('modal-register')" class="text-indigo-600 hover:underline">มีบัญชีแล้ว? เข้าสู่ระบบ</button>
@@ -665,7 +666,6 @@
             <select id="std-gender" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
               <option value="M">ชาย</option>
               <option value="F">หญิง</option>
-              <option value="OTHER">อื่นๆ</option>
             </select>
           </div>
         </div>
