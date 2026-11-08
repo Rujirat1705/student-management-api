@@ -429,6 +429,7 @@ async function loadDashboard() {
     document.getElementById('stat-total-teachers').textContent = sum.total_teachers || 0;
 
     renderDashboardCharts(data);
+    await renderDashboardStudents();
   } catch (e) {
     console.error('Error loading dashboard:', e);
   }
@@ -497,6 +498,85 @@ function renderDashboardCharts(data) {
   }
 }
 
+// โหลดและแสดงรายชื่อนักศึกษาที่หน้าแรก (สามารถดูได้ทุกคนแม้ยังไม่เข้าสู่ระบบ)
+async function renderDashboardStudents() {
+  const tbody = document.getElementById('dashboard-students-tbody');
+  if (!tbody) return;
+
+  try {
+    const res = await window.smsApi.getStudents();
+    const students = res.results || res;
+
+    if (!students || students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">ยังไม่มีข้อมูลนักศึกษาในระบบ</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = students.map(s => {
+      const gpa = parseFloat(s.gpa || 0);
+      let gpaClass = 'gpa-low';
+      if (gpa >= 3.0) gpaClass = 'gpa-high';
+      else if (gpa >= 2.0) gpaClass = 'gpa-medium';
+
+      const statusMap = {
+        'ACTIVE': { label: 'กำลังศึกษา', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+        'GRADUATED': { label: 'สำเร็จการศึกษา', class: 'bg-blue-50 text-blue-700 border-blue-200' },
+        'SUSPENDED': { label: 'พักการเรียน', class: 'bg-amber-50 text-amber-700 border-amber-200' },
+        'DROPPED': { label: 'พ้นสภาพ', class: 'bg-rose-50 text-rose-700 border-rose-200' },
+      };
+      const st = statusMap[s.status] || { label: s.status || '-', class: 'bg-slate-100 text-slate-600' };
+      const initials = (s.first_name || '').charAt(0) + (s.last_name || '').charAt(0);
+
+      return `
+        <tr class="hover:bg-slate-50/70 transition">
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-3">
+              <button type="button" onclick="viewStudentDetail(${s.id})" class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-100 to-violet-100 text-indigo-700 font-bold flex items-center justify-center text-xs hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition cursor-pointer" title="คลิกเพื่อดูข้อมูลทั้งหมด">
+                ${initials || 'ST'}
+              </button>
+              <button type="button" onclick="viewStudentDetail(${s.id})" class="text-left group cursor-pointer focus:outline-none" title="คลิกเพื่อดูข้อมูลทั้งหมด">
+                <p class="font-bold text-slate-800 group-hover:text-indigo-600 group-hover:underline transition flex items-center gap-1.5">
+                  <span>${s.title || ''}${s.first_name} ${s.last_name}</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400 group-hover:text-indigo-600 transition"></i>
+                </p>
+                <p class="text-[11px] text-slate-400 font-mono">${s.student_id}</p>
+              </button>
+            </div>
+          </td>
+          <td class="py-3 px-4">
+            <span class="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100 mb-0.5">
+              ${s.department_code || 'CPE'}
+            </span>
+            <p class="text-[11px] text-slate-500">ชั้นปีที่ ${s.year_level || 1}</p>
+          </td>
+          <td class="py-3 px-4 text-slate-600 text-xs">
+            ${s.advisor_name || 'ไม่ระบุ'}
+          </td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-block font-extrabold text-xs px-2.5 py-1 rounded-lg ${gpaClass}">
+              ${parseFloat(s.gpa || 0).toFixed(2)}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-block text-[11px] font-semibold px-2.5 py-1 rounded-full border ${st.class}">
+              ${st.label}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="viewStudentDetail(${s.id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs transition ml-auto" title="ดูข้อมูลนักศึกษา">
+              <i class="fa-solid fa-eye"></i>
+              <span>ดูข้อมูล</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Error rendering dashboard students:', err);
+    tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-400">กำลังเชื่อมต่อข้อมูลนักศึกษา...</td></tr>';
+  }
+}
+
 // ค้นหานักศึกษาที่ตรงกับผู้ใช้งานปัจจุบัน (สำหรับมุมมองนักศึกษา)
 function findStudentForCurrentUser(studentsList) {
   const user = window.smsApi.user;
@@ -524,6 +604,35 @@ function findStudentForCurrentUser(studentsList) {
 
 async function loadStudents() {
   const tbody = document.getElementById('student-table-body');
+  const isAdmin = window.smsApi.isAdmin();
+  const isAuth = window.smsApi.isAuthenticated();
+
+  // ลบ Banner แจ้งเตือนเดิมถ้ามี
+  const existingBanner = document.getElementById('student-view-banner');
+  if (existingBanner) existingBanner.remove();
+
+  // ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลในหน้าข้อมูลนิสิต
+  if (!isAuth) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="py-16 text-center">
+          <div class="max-w-md mx-auto space-y-3">
+            <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-xs">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <h4 class="text-base font-bold text-slate-800">ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลนักศึกษา</h4>
+            <p class="text-xs text-slate-500">กรุณาเข้าสู่ระบบด้วยบัญชีแอดมินหรือบัญชีนักศึกษาเพื่อเข้าถึงและจัดการข้อมูลในหน้านี้</p>
+            <button onclick="openModal('modal-login')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow transition">
+              <i class="fa-solid fa-right-to-bracket"></i>
+              <span>เข้าสู่ระบบ (Login)</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">กำลังโหลดข้อมูลนักศึกษา...</td></tr>';
 
   const params = {};
@@ -541,13 +650,6 @@ async function loadStudents() {
     const res = await window.smsApi.getStudents(params);
     let students = res.results || res;
     appState.students = students;
-
-    const isAdmin = window.smsApi.isAdmin();
-    const isAuth = window.smsApi.isAuthenticated();
-
-    // ลบ Banner แจ้งเตือนเดิมถ้ามี
-    const existingBanner = document.getElementById('student-view-banner');
-    if (existingBanner) existingBanner.remove();
 
     // ถ้าเข้าสู่ระบบในฐานะนักศึกษา (ไม่ใช่แอดมิน) ให้แสดงเฉพาะข้อมูลของตัวเองเท่านั้น!
     if (isAuth && !isAdmin) {
@@ -921,6 +1023,31 @@ async function deleteCourse(id, code) {
 
 async function loadEnrollments() {
   const tbody = document.getElementById('enrollment-table-body');
+  const isAdmin = window.smsApi.isAdmin();
+  const isAuth = window.smsApi.isAuthenticated();
+
+  // ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลในหน้าการลงทะเบียนตัดเกรด
+  if (!isAuth) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-16 text-center">
+          <div class="max-w-md mx-auto space-y-3">
+            <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-xs">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <h4 class="text-base font-bold text-slate-800">ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลการลงทะเบียนและตัดเกรด</h4>
+            <p class="text-xs text-slate-500">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้เพื่อดูประวัติการลงทะเบียนรายวิชาและจัดการผลการเรียน</p>
+            <button onclick="openModal('modal-login')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow transition">
+              <i class="fa-solid fa-right-to-bracket"></i>
+              <span>เข้าสู่ระบบ (Login)</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">กำลังโหลดรายการลงทะเบียน...</td></tr>';
 
   const params = {};
@@ -930,9 +1057,6 @@ async function loadEnrollments() {
   try {
     const res = await window.smsApi.getEnrollments(params);
     let enrollments = res.results || res;
-
-    const isAdmin = window.smsApi.isAdmin();
-    const isAuth = window.smsApi.isAuthenticated();
 
     // หากล็อกอินเป็นนักศึกษา ให้เห็นเฉพาะวิชาที่ตัวเองลงทะเบียนไว้เท่านั้น!
     if (isAuth && !isAdmin) {
