@@ -24,22 +24,15 @@ const appState = {
 document.addEventListener('DOMContentLoaded', async () => {
   initEventListeners();
   updateAuthUI();
-  updateServerStatusUI();
 
-  // ตรวจสอบการเชื่อมต่อเซิร์ฟเวอร์ Backend
-  const isOnline = await window.smsApi.checkServerHealth();
-  if (!isOnline && !window.smsApi.isMockMode) {
-    // ถ้าเซิร์ฟเวอร์ยังไม่เปิด ให้เปิดโหมด Mock Demo ให้อัตโนมัติ เพื่อให้ผู้ใช้เปิดดูผลงานได้ทันที
-    window.smsApi.setMockMode(true);
-    updateServerStatusUI();
-    Swal.fire({
-      icon: 'info',
-      title: 'เปิดโหมดจำลอง (Mock Demo Mode)',
-      text: 'ไม่พบการเชื่อมต่อกับ Django Backend API ระบบจึงเปิดโหมดข้อมูลจำลองให้คุณสามารถทดสอบคลิกดูผลงานได้ทันที!',
-      confirmButtonText: 'รับทราบ',
-      confirmButtonColor: '#4f46e5'
-    });
+  // เชื่อมต่อ Backend API อัตโนมัติ (ไม่เปิดโหมด Mock Demo)
+  window.smsApi.setMockMode(false);
+  try {
+    await window.smsApi.checkServerHealth();
+  } catch (e) {
+    // ดำเนินการต่อเพื่อเชื่อมต่อ API
   }
+  updateServerStatusUI();
 
   // โหลดข้อมูลพื้นฐานและ Dashboard
   await loadBaseData();
@@ -135,19 +128,25 @@ function initEventListeners() {
   });
 
   // Mock Mode Toggle
-  document.getElementById('btn-toggle-mock').addEventListener('click', () => {
-    const newMode = !window.smsApi.isMockMode;
-    window.smsApi.setMockMode(newMode);
-    updateServerStatusUI();
-    showToast('info', `สลับโหมดเป็น: ${newMode ? 'Mock Data (ข้อมูลจำลอง)' : 'Live Backend API'}`);
-    loadDashboard();
-  });
+  const btnToggleMock = document.getElementById('btn-toggle-mock');
+  if (btnToggleMock) {
+    btnToggleMock.addEventListener('click', () => {
+      const newMode = !window.smsApi.isMockMode;
+      window.smsApi.setMockMode(newMode);
+      updateServerStatusUI();
+      showToast('info', `สลับโหมดเป็น: ${newMode ? 'Mock Data (ข้อมูลจำลอง)' : 'Live Backend API'}`);
+      loadDashboard();
+    });
+  }
 
   // Server Config
-  document.getElementById('btn-open-server-config').addEventListener('click', () => {
-    document.getElementById('config-base-url').value = window.smsApi.baseUrl;
-    openModal('modal-server-config');
-  });
+  const btnOpenConfig = document.getElementById('btn-open-server-config');
+  if (btnOpenConfig) {
+    btnOpenConfig.addEventListener('click', () => {
+      document.getElementById('config-base-url').value = window.smsApi.baseUrl;
+      openModal('modal-server-config');
+    });
+  }
 
   document.getElementById('btn-save-server-config').addEventListener('click', async () => {
     const val = document.getElementById('config-base-url').value;
@@ -674,11 +673,65 @@ async function viewStudentDetail(id) {
   try {
     const student = await window.smsApi.getStudent(id);
 
+    // Profile header
     document.getElementById('detail-name').textContent = `${student.title || ''}${student.first_name} ${student.last_name}`;
-    document.getElementById('detail-code-dept').textContent = `รหัส: ${student.student_id} | ${student.department_name || ''} (ปี ${student.year_level})`;
+    document.getElementById('detail-code-dept').textContent = `รหัส: ${student.student_id} | ${student.department_name || ''} (ปี ${student.year_level || '-'})`;
     document.getElementById('detail-advisor').textContent = `อาจารย์ที่ปรึกษา: ${student.advisor_name || 'ไม่ระบุ'}`;
     document.getElementById('detail-gpa').textContent = student.gpa;
     document.getElementById('detail-avatar').textContent = (student.first_name || '').charAt(0) + (student.last_name || '').charAt(0);
+
+    // Status label mapping
+    const statusMap = {
+      ACTIVE: { label: 'กำลังศึกษา (Active)', class: 'bg-emerald-100 text-emerald-700' },
+      GRADUATED: { label: 'สำเร็จการศึกษา (Graduated)', class: 'bg-blue-100 text-blue-700' },
+      SUSPENDED: { label: 'พักการเรียน (Suspended)', class: 'bg-amber-100 text-amber-700' },
+      DROPPED: { label: 'พ้นสภาพ (Dropped)', class: 'bg-rose-100 text-rose-700' },
+    };
+    const stObj = statusMap[student.status] || { label: student.status || '-', class: 'bg-slate-100 text-slate-700' };
+    const detailStatus = document.getElementById('detail-status');
+    if (detailStatus) {
+      detailStatus.textContent = stObj.label;
+      detailStatus.className = `${stObj.class} text-[10px] font-semibold px-2 py-0.5 rounded-full`;
+    }
+
+    // แมปข้อมูลนักศึกษาทั้งหมดให้ตรงตามหน้าแก้ไขข้อมูลนักศึกษา
+    const genderLabels = { 'M': 'ชาย', 'F': 'หญิง', 'O': 'อื่นๆ' };
+    const genderText = genderLabels[student.gender] || (student.gender === 'M' ? 'ชาย' : student.gender === 'F' ? 'หญิง' : student.gender || '-');
+
+    // ค้นหาชื่อภาควิชา
+    let deptName = student.department_name;
+    if (!deptName && student.department && Array.isArray(appState.departments)) {
+      const d = appState.departments.find(dept => dept.id === student.department || dept.id === Number(student.department));
+      if (d) deptName = `${d.code} - ${d.name}`;
+    }
+    if (!deptName) deptName = student.department || '-';
+
+    // ค้นหาชื่ออาจารย์ที่ปรึกษา
+    let advName = student.advisor_name;
+    if (!advName && student.advisor && Array.isArray(appState.teachers)) {
+      const t = appState.teachers.find(tch => tch.id === student.advisor || tch.id === Number(student.advisor));
+      if (t) advName = `${t.full_name || `${t.title || ''} ${t.first_name} ${t.last_name}`} (${t.teacher_code || ''})`;
+    }
+    if (!advName) advName = student.advisor || 'ไม่ระบุ';
+
+    const setElem = (elemId, text) => {
+      const el = document.getElementById(elemId);
+      if (el) el.textContent = (text !== undefined && text !== null && text !== '') ? text : '-';
+    };
+
+    setElem('detail-info-student-id', student.student_id);
+    setElem('detail-info-title', student.title);
+    setElem('detail-info-gender', genderText);
+    setElem('detail-info-first-name', student.first_name);
+    setElem('detail-info-last-name', student.last_name);
+    setElem('detail-info-email', student.email);
+    setElem('detail-info-phone', student.phone || 'ไม่ระบุ');
+    setElem('detail-info-dob', student.date_of_birth || 'ไม่ระบุ');
+    setElem('detail-info-department', deptName);
+    setElem('detail-info-advisor', advName);
+    setElem('detail-info-year', student.year_level ? `ปี ${student.year_level}` : '-');
+    setElem('detail-info-status', stObj.label);
+    setElem('detail-info-address', student.address || 'ไม่ระบุที่อยู่');
 
     const tbody = document.getElementById('detail-enrollment-tbody');
     const enrollments = student.enrollments || [];

@@ -14,11 +14,20 @@ const API_STORAGE_KEYS = {
 
 class ApiService {
   constructor() {
-    this.baseUrl = localStorage.getItem(API_STORAGE_KEYS.BASE_URL) || 'http://127.0.0.1:8000';
+    const savedUrl = localStorage.getItem(API_STORAGE_KEYS.BASE_URL);
+    if (savedUrl) {
+      this.baseUrl = savedUrl;
+    } else if (window.location.protocol.startsWith('http') && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+      this.baseUrl = window.location.origin;
+    } else {
+      this.baseUrl = 'http://127.0.0.1:8000';
+    }
     this.accessToken = localStorage.getItem(API_STORAGE_KEYS.ACCESS_TOKEN) || null;
     this.refreshToken = localStorage.getItem(API_STORAGE_KEYS.REFRESH_TOKEN) || null;
     this.user = JSON.parse(localStorage.getItem(API_STORAGE_KEYS.USER_DATA) || 'null');
-    this.isMockMode = localStorage.getItem(API_STORAGE_KEYS.USE_MOCK) === 'true';
+    // เชื่อมต่อ API อัตโนมัติ ปิดโหมด Mock ถาวร
+    this.isMockMode = false;
+    localStorage.removeItem(API_STORAGE_KEYS.USE_MOCK);
     this.isServerOnline = false;
   }
 

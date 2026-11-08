@@ -94,8 +94,8 @@
 
       <!-- Sidebar Footer (Status & Switcher) -->
       <div class="p-4 border-t border-slate-100 bg-slate-50/70 space-y-3">
-        <!-- Backend Status Card -->
-        <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+        <!-- Backend Status Card (Hidden) -->
+        <div id="backend-status-card" class="hidden bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
           <div class="flex items-center justify-between text-xs mb-1.5">
             <span class="text-slate-500 font-medium">สถานะเซิร์ฟเวอร์:</span>
             <span id="server-status-pill" class="flex items-center gap-1.5 font-semibold text-emerald-600 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -474,71 +474,6 @@
               </a>
             </div>
           </div>
-
-          <!-- Project Rubric Checklist (100 คะแนนเต็ม) -->
-          <div class="glass-card p-6 rounded-2xl">
-            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <i class="fa-solid fa-list-check text-indigo-600"></i>
-              <span>เกณฑ์การประเมินโครงงานประจำวิชา (100 คะแนนเต็ม)</span>
-            </h3>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold">
-                    <th class="py-3 px-4">หัวข้อการประเมิน</th>
-                    <th class="py-3 px-4">รายละเอียด</th>
-                    <th class="py-3 px-4 text-center">คะแนน</th>
-                    <th class="py-3 px-4 text-center">สถานะความพร้อม</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">1. ความสมบูรณ์ของระบบ</td>
-                    <td class="py-3 px-4 text-slate-600">CRUD ครบทุกโมเดล, JWT Authentication, Dynamic GPA, Response ถูกต้อง</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">20</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">2. การออกแบบระบบ</td>
-                    <td class="py-3 px-4 text-slate-600">Model 5 ตัว + User, ความสัมพันธ์ 1:N, ER Diagram, Flow การตัดเกรด</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">15</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">3. ความถูกต้องของ API</td>
-                    <td class="py-3 px-4 text-slate-600">มาตรฐาน RESTful, HTTP Status (200, 201, 204, 400, 401, 404), จัดการ Error ชัดเจน</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">15</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">4. การทดสอบระบบ</td>
-                    <td class="py-3 px-4 text-slate-600">Postman Collection พร้อมรัน Test Script ตรวจสอบผลลัพธ์</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมทดสอบ</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">5. การจัดทำเอกสาร API</td>
-                    <td class="py-3 px-4 text-slate-600">Swagger UI & Redoc ผ่าน drf-spectacular พร้อมคำอธิบายฟิลด์ครบถ้วน</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมใช้งาน</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">6. การนำเสนอผลงาน</td>
-                    <td class="py-3 px-4 text-slate-600">Frontend UI สุดหรูหรา ใช้งานง่าย พร้อมการสาธิตระบบแบบสด</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมสาธิต</span></td>
-                  </tr>
-                  <tr>
-                    <td class="py-3 px-4 font-semibold text-slate-800">7. การทำงานเป็นทีม & รายงาน</td>
-                    <td class="py-3 px-4 text-slate-600">GitHub Repository, Git Commits, เอกสารรายงานโครงงาน PDF</td>
-                    <td class="py-3 px-4 text-center font-bold text-indigo-600">20</td>
-                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">มีโครงสร้างพร้อม</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </section>
 
       </main>
@@ -779,6 +714,88 @@
             <i class="fa-solid fa-bolt text-amber-500"></i>
             <span>คำนวณ GPA ใหม่</span>
           </button>
+        </div>
+      </div>
+
+      <!-- ข้อมูลนักศึกษาทั้งหมด (ตามหน้าแก้ไขข้อมูลนักศึกษา) -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <h5 class="font-bold text-slate-800 text-sm flex items-center gap-2 pb-2.5 border-b border-slate-100">
+          <i class="fa-solid fa-address-card text-indigo-600"></i>
+          <span>ข้อมูลนักศึกษาทั้งหมด</span>
+        </h5>
+
+        <!-- แถวที่ 1: รหัสนักศึกษา, คำนำหน้า, เพศ -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">รหัสนักศึกษา</span>
+            <span id="detail-info-student-id" class="text-xs font-bold text-slate-800 font-mono text-sm">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">คำนำหน้า</span>
+            <span id="detail-info-title" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">เพศ</span>
+            <span id="detail-info-gender" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 2: ชื่อจริง, นามสกุล -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">ชื่อจริง</span>
+            <span id="detail-info-first-name" class="text-xs font-bold text-slate-800">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">นามสกุล</span>
+            <span id="detail-info-last-name" class="text-xs font-bold text-slate-800">-</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 3: อีเมล, เบอร์โทรศัพท์, วันเกิด -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">อีเมล</span>
+            <span id="detail-info-email" class="text-xs font-medium text-slate-700 break-all">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">เบอร์โทรศัพท์</span>
+            <span id="detail-info-phone" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">วันเกิด</span>
+            <span id="detail-info-dob" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 4: ภาควิชา/สาขาวิชา, อาจารย์ที่ปรึกษา -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">ภาควิชา/สาขาวิชา</span>
+            <span id="detail-info-department" class="text-xs font-bold text-indigo-700">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">อาจารย์ที่ปรึกษา</span>
+            <span id="detail-info-advisor" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 5: ชั้นปี, สถานะภาพ -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">ชั้นปี</span>
+            <span id="detail-info-year" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <span class="block text-[11px] font-semibold text-slate-400 mb-1">สถานะภาพ</span>
+            <span id="detail-info-status" class="text-xs font-medium text-slate-700">-</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 6: ที่อยู่ -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <span class="block text-[11px] font-semibold text-slate-400 mb-1">ที่อยู่</span>
+          <span id="detail-info-address" class="text-xs text-slate-700 leading-relaxed block">-</span>
         </div>
       </div>
 
