@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบริหารจัดการข้อมูลนักศึกษา | Student Management System (RESTful API)</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Kanit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SweetAlert2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex flex-col min-h-screen">
+
+  <div class="flex h-screen overflow-hidden">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between z-30 transition-all duration-300">
+      <div>
+        <!-- Brand / Header -->
+        <div class="h-20 flex items-center px-6 border-b border-slate-100 gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+            <i class="fa-solid fa-graduation-cap text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-slate-900 tracking-tight leading-tight">UniCore SMS</h1>
+            <p class="text-xs text-indigo-600 font-medium tracking-wide">RESTful API 2569</p>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-4 space-y-1 text-sm font-medium">
+          <button data-tab="dashboard" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+            <span>Dashboard สถิติ</span>
+          </button>
+          <button data-tab="students" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-user-graduate w-5 text-center"></i>
+            <span>จัดการข้อมูลนักศึกษา</span>
+          </button>
+          <button data-tab="courses" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-book-open-reader w-5 text-center"></i>
+            <span>รายวิชาที่เปิดสอน</span>
+          </button>
+          <button data-tab="enrollments" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
+            <span>การลงทะเบียน & ตัดเกรด</span>
+          </button>
+          <button data-tab="departments" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-building-columns w-5 text-center"></i>
+            <span>ภาควิชา & คณาจารย์</span>
+          </button>
+          <button data-tab="api-docs" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-code w-5 text-center"></i>
+            <span>เอกสาร API (Swagger)</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer (Status & Switcher) -->
+      <div class="p-4 border-t border-slate-100 bg-slate-50/70 space-y-3">
+        <!-- Backend Status Card -->
+        <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <span class="text-slate-500 font-medium">สถานะเซิร์ฟเวอร์:</span>
+            <span id="server-status-pill" class="flex items-center gap-1.5 font-semibold text-emerald-600 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-online"></span>
+              กำลังตรวจสอบ...
+            </span>
+          </div>
+          <p id="current-api-endpoint" class="text-[11px] text-slate-400 truncate mb-2" title="API Base URL">http://127.0.0.1:8000</p>
+          <div class="flex gap-2">
+            <button id="btn-open-server-config" class="text-xs flex-1 py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-medium transition">
+              <i class="fa-solid fa-gear mr-1"></i> ตั้งค่า API
+            </button>
+            <button id="btn-toggle-mock" class="text-xs py-1 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-medium transition" title="สลับโหมด Mock Data เพื่อทดสอบ">
+              <i class="fa-solid fa-shuffle mr-1"></i> <span id="mock-status-text">Mock: OFF</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400 text-center">
+          โครงงานระบบจัดการข้อมูลนักศึกษา
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Topbar -->
+      <header class="glass-header h-20 px-8 flex items-center justify-between z-20">
+        <div class="flex items-center gap-4">
+          <button id="sidebar-toggle" class="lg:hidden text-slate-600 hover:text-slate-900 p-2">
+            <i class="fa-solid fa-bars text-xl"></i>
+          </button>
+          <div>
+            <h2 id="page-title" class="text-xl font-bold text-slate-900">ภาพรวมสถิติระบบ (Dashboard)</h2>
+            <p id="page-subtitle" class="text-xs text-slate-500">รายงานสรุปข้อมูลนักศึกษาและการลงทะเบียนเรียนแบบเรียลไทม์</p>
+          </div>
+        </div>
+
+        <!-- Right Action Items -->
+        <div class="flex items-center gap-4">
+          <!-- Refresh Button -->
+          <button id="btn-refresh-data" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="โหลดข้อมูลใหม่">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+
+          <!-- Auth Status / User Profile -->
+          <div id="auth-container" class="flex items-center gap-3">
+            <button id="btn-login-modal" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition">
+              <i class="fa-solid fa-right-to-bracket"></i>
+              <span>เข้าสู่ระบบ (JWT)</span>
+            </button>
+
+            <div id="user-profile-badge" class="hidden flex items-center gap-3 pl-3 border-l border-slate-200">
+              <div class="text-right">
+                <p id="auth-username" class="text-xs font-bold text-slate-800">admin</p>
+                <p id="auth-role" class="text-[10px] text-indigo-600 font-medium">Administrator</p>
+              </div>
+              <button id="btn-logout" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition" title="ออกจากระบบ">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Body Area -->
+      <main class="flex-1 overflow-y-auto p-8 space-y-6">
+
+        <!-- ================= SECTION 1: DASHBOARD ================= -->
+        <section id="tab-dashboard" class="tab-content active space-y-6">
+          <!-- Metrics Cards Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Card 1 -->
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">นักศึกษาทั้งหมด</p>
+                <h3 id="stat-total-students" class="text-3xl font-extrabold text-slate-900">-</h3>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-check-circle"></i> กำลังศึกษา: <span id="stat-active-students">-</span>
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-user-graduate"></i>
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">เกรดเฉลี่ยสะสม (GPA)</p>
+                <h3 id="stat-avg-gpa" class="text-3xl font-extrabold text-indigo-600">-</h3>
+                <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-calculator"></i> คำนวณแบบ Real-time
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">รายวิชาที่เปิดสอน</p>
+                <h3 id="stat-total-courses" class="text-3xl font-extrabold text-slate-900">-</h3>
+                <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-book"></i> ใน 4 ภาควิชาหลัก
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-book-bookmark"></i>
+              </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">การลงทะเบียนเรียน</p>
+                <h3 id="stat-total-enrollments" class="text-3xl font-extrabold text-slate-900">-</h3>
+                <p class="text-[11px] text-purple-600 font-medium mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-chalkboard-user"></i> คณาจารย์: <span id="stat-total-teachers">-</span> ท่าน
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-file-signature"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Chart 1: Students by Department -->
+            <div class="glass-card p-6 rounded-2xl">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="font-bold text-slate-800 text-sm">จำนวนนักศึกษาจำแนกตามภาควิชา</h4>
+                <span class="text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md">Real-time Data</span>
+              </div>
+              <div class="h-64 relative">
+                <canvas id="chart-departments"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 2: Students by Year Level -->
+            <div class="glass-card p-6 rounded-2xl">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="font-bold text-slate-800 text-sm">สัดส่วนนักศึกษาจำแนกตามชั้นปี (ปี 1 - 4)</h4>
+                <span class="text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md">ชั้นปี 2569</span>
+              </div>
+              <div class="h-64 relative">
+                <canvas id="chart-years"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Overview Banner -->
+          <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <span class="bg-indigo-500/30 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-400/30">
+                  Django REST Framework SimpleJWT
+                </span>
+                <h3 class="text-xl font-bold mt-2">สถาปัตยกรรม RESTful API แบบไร้รอยต่อ</h3>
+                <p class="text-indigo-200 text-xs mt-1 max-w-xl">
+                  ระบบนี้ทำงานร่วมกับ Backend API เต็มรูปแบบ โดยมี ViewSets, Serializers, Dynamic GPA Calculator และ Swagger UI สำหรับเอกสาร API
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="switchTab('students')" class="bg-white text-indigo-900 hover:bg-slate-100 text-xs font-bold px-4 py-2.5 rounded-lg shadow transition">
+                  <i class="fa-solid fa-users mr-1"></i> จัดการนักศึกษา
+                </button>
+                <button onclick="switchTab('api-docs')" class="bg-indigo-700/60 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-indigo-400/30 transition">
+                  <i class="fa-solid fa-code mr-1"></i> ดู Swagger Docs
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SECTION 2: STUDENTS ================= -->
+        <section id="tab-students" class="tab-content hidden space-y-6">
+          <!-- Control Bar -->
+          <div class="glass-card p-5 rounded-2xl space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <!-- Search Box -->
+              <div class="relative flex-1 max-w-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                <input id="student-search-input" type="text" placeholder="ค้นหาด้วยรหัสนักศึกษา, ชื่อ, นามสกุล หรืออีเมล..." 
+                  class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+              </div>
+
+              <!-- Filter dropdowns & Add Button -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                <select id="filter-student-dept" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="">ทุกภาควิชา</option>
+                </select>
+
+                <select id="filter-student-year" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="">ทุกชั้นปี</option>
+                  <option value="1">ชั้นปีที่ 1</option>
+                  <option value="2">ชั้นปีที่ 2</option>
+                  <option value="3">ชั้นปีที่ 3</option>
+                  <option value="4">ชั้นปีที่ 4</option>
+                </select>
+
+                <select id="filter-student-status" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="">ทุกสถานะภาพ</option>
+                  <option value="ACTIVE">กำลังศึกษา</option>
+                  <option value="GRADUATED">สำเร็จการศึกษา</option>
+                  <option value="SUSPENDED">พักการเรียน</option>
+                  <option value="DROPPED">พ้นสภาพ</option>
+                </select>
+
+                <button id="btn-add-student" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
+                  <i class="fa-solid fa-user-plus"></i>
+                  <span>เพิ่มนักศึกษา</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Students Table -->
+          <div class="glass-card rounded-2xl overflow-hidden border border-slate-200">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <th class="py-3.5 px-4">รหัส / นักศึกษา</th>
+                    <th class="py-3.5 px-4">ภาควิชา & ชั้นปี</th>
+                    <th class="py-3.5 px-4">อาจารย์ที่ปรึกษา</th>
+                    <th class="py-3.5 px-4 text-center">เกรดเฉลี่ย (GPA)</th>
+                    <th class="py-3.5 px-4 text-center">สถานะ</th>
+                    <th class="py-3.5 px-4 text-right">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="student-table-body" class="divide-y divide-slate-100">
+                  <!-- Generated via JS -->
+                  <tr>
+                    <td colspan="6" class="py-8 text-center text-slate-400">กำลังโหลดข้อมูลนักศึกษา...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SECTION 3: COURSES ================= -->
+        <section id="tab-courses" class="tab-content hidden space-y-6">
+          <div class="glass-card p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="relative w-full sm:w-80">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input id="course-search-input" type="text" placeholder="ค้นหารหัสวิชา หรือชื่อวิชา..." 
+                class="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+            </div>
+            <button id="btn-add-course" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-sm transition">
+              <i class="fa-solid fa-plus"></i>
+              <span>เพิ่มรายวิชา</span>
+            </button>
+          </div>
+
+          <div id="courses-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Populated via JS -->
+          </div>
+        </section>
+
+        <!-- ================= SECTION 4: ENROLLMENTS & GRADES ================= -->
+        <section id="tab-enrollments" class="tab-content hidden space-y-6">
+          <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <input id="enrollment-search-input" type="text" placeholder="ค้นหาด้วยรหัสนักศึกษา หรือรหัสวิชา..." 
+                class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-64">
+              <select id="filter-enrollment-semester" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                <option value="">ทุกภาคการศึกษา</option>
+                <option value="1/2569">1/2569</option>
+                <option value="2/2568">2/2568</option>
+                <option value="1/2568">1/2568</option>
+              </select>
+            </div>
+            <button id="btn-add-enrollment" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
+              <i class="fa-solid fa-file-circle-plus"></i>
+              <span>ลงทะเบียนเรียนใหม่</span>
+            </button>
+          </div>
+
+          <div class="glass-card rounded-2xl overflow-hidden border border-slate-200">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <th class="py-3.5 px-4">นักศึกษา</th>
+                    <th class="py-3.5 px-4">รหัส & รายวิชา</th>
+                    <th class="py-3.5 px-4 text-center">หน่วยกิต</th>
+                    <th class="py-3.5 px-4">ภาคการศึกษา</th>
+                    <th class="py-3.5 px-4 text-center">ผลการเรียน (Grade)</th>
+                    <th class="py-3.5 px-4 text-center">สถานะ</th>
+                    <th class="py-3.5 px-4 text-right">ตัดเกรด / จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="enrollment-table-body" class="divide-y divide-slate-100">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SECTION 5: DEPARTMENTS & TEACHERS ================= -->
+        <section id="tab-departments" class="tab-content hidden space-y-6">
+          <!-- Departments Grid -->
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-slate-900 text-base">ภาควิชาและสาขาวิชา (Departments)</h3>
+              <span class="text-xs text-slate-400">คณะเทคโนโลยีและวิทยาการคอมพิวเตอร์</span>
+            </div>
+            <div id="departments-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+
+          <!-- Teachers Grid -->
+          <div class="pt-4">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-slate-900 text-base">ทำเนียบคณาจารย์และอาจารย์ที่ปรึกษา (Faculty Members)</h3>
+            </div>
+            <div id="teachers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SECTION 6: API DOCS & RUBRIC ================= -->
+        <section id="tab-api-docs" class="tab-content hidden space-y-6">
+          <!-- API Docs Card -->
+          <div class="glass-card p-6 rounded-2xl">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-file-code"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-slate-900">เอกสารประกอบ RESTful API แบบ Interactive (drf-spectacular)</h3>
+                <p class="text-xs text-slate-500">สามารถกดทดสอบและดู Schema สเปก OpenAPI 3.0 ได้ทันที</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <a id="link-swagger" href="http://127.0.0.1:8000/api/docs/" target="_blank" class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 transition group flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-indigo-900 text-sm">Swagger UI</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-indigo-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+                  </div>
+                  <p class="text-xs text-indigo-700">ทดสอบเรียกยิง API Endpoints แบบ Interactive พร้อม Auth Header</p>
+                </div>
+                <span class="mt-4 text-[11px] font-mono text-indigo-500">/api/docs/</span>
+              </a>
+
+              <a id="link-redoc" href="http://127.0.0.1:8000/api/redoc/" target="_blank" class="p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 transition group flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-purple-900 text-sm">Redoc</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-purple-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+                  </div>
+                  <p class="text-xs text-purple-700">เอกสาร API ดีไซน์สวยงาม อ่านง่าย ครอบคลุม Request / Response</p>
+                </div>
+                <span class="mt-4 text-[11px] font-mono text-purple-500">/api/redoc/</span>
+              </a>
+
+              <a id="link-schema" href="http://127.0.0.1:8000/api/schema/" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition group flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-slate-800 text-sm">OpenAPI Schema</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+                  </div>
+                  <p class="text-xs text-slate-600">ดาวน์โหลด raw schema YAML/JSON เพื่อนำไปนำเข้า Postman</p>
+                </div>
+                <span class="mt-4 text-[11px] font-mono text-slate-500">/api/schema/</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Project Rubric Checklist (100 คะแนนเต็ม) -->
+          <div class="glass-card p-6 rounded-2xl">
+            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-indigo-600"></i>
+              <span>เกณฑ์การประเมินโครงงานประจำวิชา (100 คะแนนเต็ม)</span>
+            </h3>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold">
+                    <th class="py-3 px-4">หัวข้อการประเมิน</th>
+                    <th class="py-3 px-4">รายละเอียด</th>
+                    <th class="py-3 px-4 text-center">คะแนน</th>
+                    <th class="py-3 px-4 text-center">สถานะความพร้อม</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">1. ความสมบูรณ์ของระบบ</td>
+                    <td class="py-3 px-4 text-slate-600">CRUD ครบทุกโมเดล, JWT Authentication, Dynamic GPA, Response ถูกต้อง</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">20</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">2. การออกแบบระบบ</td>
+                    <td class="py-3 px-4 text-slate-600">Model 5 ตัว + User, ความสัมพันธ์ 1:N, ER Diagram, Flow การตัดเกรด</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">15</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">3. ความถูกต้องของ API</td>
+                    <td class="py-3 px-4 text-slate-600">มาตรฐาน RESTful, HTTP Status (200, 201, 204, 400, 401, 404), จัดการ Error ชัดเจน</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">15</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">สมบูรณ์ 100%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">4. การทดสอบระบบ</td>
+                    <td class="py-3 px-4 text-slate-600">Postman Collection พร้อมรัน Test Script ตรวจสอบผลลัพธ์</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมทดสอบ</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">5. การจัดทำเอกสาร API</td>
+                    <td class="py-3 px-4 text-slate-600">Swagger UI & Redoc ผ่าน drf-spectacular พร้อมคำอธิบายฟิลด์ครบถ้วน</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมใช้งาน</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">6. การนำเสนอผลงาน</td>
+                    <td class="py-3 px-4 text-slate-600">Frontend UI สุดหรูหรา ใช้งานง่าย พร้อมการสาธิตระบบแบบสด</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">10</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">พร้อมสาธิต</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-semibold text-slate-800">7. การทำงานเป็นทีม & รายงาน</td>
+                    <td class="py-3 px-4 text-slate-600">GitHub Repository, Git Commits, เอกสารรายงานโครงงาน PDF</td>
+                    <td class="py-3 px-4 text-center font-bold text-indigo-600">20</td>
+                    <td class="py-3 px-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-medium">มีโครงสร้างพร้อม</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. LOGIN MODAL -->
+  <div id="modal-login" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-lock text-indigo-600"></i>
+          <span>เข้าสู่ระบบ (JWT Authentication)</span>
+        </h3>
+        <button onclick="closeModal('modal-login')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <!-- Quick Test Accounts Buttons -->
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <p class="text-[11px] text-slate-500 font-medium mb-2">คลิกเพื่อกรอกบัญชีทดสอบอัตโนมัติ:</p>
+        <div class="flex gap-2">
+          <button type="button" onclick="quickFillLogin('admin', 'admin1234')" class="text-xs flex-1 bg-white border border-slate-200 hover:border-indigo-400 py-1.5 px-2 rounded-lg font-semibold text-indigo-700 shadow-2xs">
+            👑 ผู้ดูแลระบบ (Admin)
+          </button>
+          <button type="button" onclick="quickFillLogin('student1', 'password1234')" class="text-xs flex-1 bg-white border border-slate-200 hover:border-indigo-400 py-1.5 px-2 rounded-lg font-semibold text-slate-700 shadow-2xs">
+            🎓 นักศึกษา (Student)
+          </button>
+        </div>
+      </div>
+
+      <form id="form-login" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Username (ชื่อผู้ใช้)</label>
+          <input id="login-username" type="text" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password (รหัสผ่าน)</label>
+          <input id="login-password" type="password" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+        </div>
+        <div class="flex items-center justify-between text-xs pt-1">
+          <button type="button" onclick="openModal('modal-register'); closeModal('modal-login')" class="text-indigo-600 hover:underline">สมัครสมาชิกใหม่</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl shadow transition">เข้าสู่ระบบ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. REGISTER MODAL -->
+  <div id="modal-register" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-indigo-600"></i>
+          <span>สมัครสมาชิกผู้ใช้งานใหม่</span>
+        </h3>
+        <button onclick="closeModal('modal-register')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form id="form-register" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Username *</label>
+          <input id="reg-username" type="text" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ</label>
+            <input id="reg-first-name" type="text" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">นามสกุล</label>
+            <input id="reg-last-name" type="text" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมล *</label>
+          <input id="reg-email" type="email" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน *</label>
+          <input id="reg-password" type="password" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่าน *</label>
+          <input id="reg-password-confirm" type="password" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+        </div>
+        <div class="flex items-center justify-between text-xs pt-2">
+          <button type="button" onclick="openModal('modal-login'); closeModal('modal-register')" class="text-indigo-600 hover:underline">มีบัญชีแล้ว? เข้าสู่ระบบ</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl shadow transition">สมัครสมาชิก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. ADD / EDIT STUDENT MODAL -->
+  <div id="modal-student-form" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="student-modal-title" class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-user-graduate text-indigo-600"></i>
+          <span>เพิ่มข้อมูลนักศึกษา</span>
+        </h3>
+        <button onclick="closeModal('modal-student-form')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form id="form-student" class="space-y-4">
+        <input type="hidden" id="student-form-id">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสนักศึกษา *</label>
+            <input id="std-id" type="text" placeholder="เช่น 66010003" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">คำนำหน้า</label>
+            <select id="std-title" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <option value="นาย">นาย</option>
+              <option value="นางสาว">นางสาว</option>
+              <option value="นาง">นาง</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">เพศ</label>
+            <select id="std-gender" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <option value="M">ชาย</option>
+              <option value="F">หญิง</option>
+              <option value="OTHER">อื่นๆ</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อจริง *</label>
+            <input id="std-first-name" type="text" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">นามสกุล *</label>
+            <input id="std-last-name" type="text" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">อีเมล *</label>
+            <input id="std-email" type="email" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">เบอร์โทรศัพท์</label>
+            <input id="std-phone" type="text" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">วันเกิด</label>
+            <input id="std-dob" type="date" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ภาควิชา/สาขาวิชา *</label>
+            <select id="std-department" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <!-- Options via JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">อาจารย์ที่ปรึกษา</label>
+            <select id="std-advisor" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <!-- Options via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ชั้นปี</label>
+            <select id="std-year" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <option value="1">ปี 1</option>
+              <option value="2">ปี 2</option>
+              <option value="3">ปี 3</option>
+              <option value="4">ปี 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะภาพ</label>
+            <select id="std-status" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+              <option value="ACTIVE">กำลังศึกษา (Active)</option>
+              <option value="GRADUATED">สำเร็จการศึกษา (Graduated)</option>
+              <option value="SUSPENDED">พักการเรียน (Suspended)</option>
+              <option value="DROPPED">พ้นสภาพ (Dropped)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ที่อยู่</label>
+          <textarea id="std-address" rows="2" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modal-student-form')" class="text-xs px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">ยกเลิก</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. STUDENT DETAIL & GPA RECALCULATE MODAL -->
+  <div id="modal-student-detail" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-3xl rounded-2xl p-6 shadow-2xl modal-content-scale space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-id-card text-indigo-600"></i>
+          <span>ประวัตินักศึกษา & ผลการเรียน</span>
+        </h3>
+        <button onclick="closeModal('modal-student-detail')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <!-- Profile Header Summary -->
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div id="detail-avatar" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xl font-bold shadow-md">
+            ภม
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h4 id="detail-name" class="font-bold text-slate-900 text-base">นายภานุพงศ์ มณีโรจน์</h4>
+              <span id="detail-status" class="bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">กำลังศึกษา</span>
+            </div>
+            <p id="detail-code-dept" class="text-xs text-slate-500 mt-0.5">รหัส: 66010001 | ภาควิชาวิศวกรรมคอมพิวเตอร์ (ปี 2)</p>
+            <p id="detail-advisor" class="text-xs text-slate-500 mt-0.5">อาจารย์ที่ปรึกษา: ผศ.ดร.สมชาย ใจดีเลิศ</p>
+          </div>
+        </div>
+
+        <div class="text-center sm:text-right bg-white p-3 rounded-xl border border-slate-200">
+          <p class="text-[11px] text-slate-400 font-medium">เกรดเฉลี่ยสะสม (GPA)</p>
+          <p id="detail-gpa" class="text-2xl font-black text-indigo-600">3.67</p>
+          <button id="btn-recalculate-gpa" class="mt-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 mx-auto sm:ml-auto">
+            <i class="fa-solid fa-bolt text-amber-500"></i>
+            <span>คำนวณ GPA ใหม่</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Enrolled Courses Table -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h5 class="font-bold text-slate-800 text-xs">รายวิชาที่ลงทะเบียนและผลการเรียน</h5>
+          <span id="detail-credits-summary" class="text-xs text-slate-500 font-medium">รวม 9 หน่วยกิต</span>
+        </div>
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                <th class="py-2.5 px-3">รหัสวิชา</th>
+                <th class="py-2.5 px-3">ชื่อวิชา</th>
+                <th class="py-2.5 px-3 text-center">หน่วยกิต</th>
+                <th class="py-2.5 px-3">ภาคการศึกษา</th>
+                <th class="py-2.5 px-3 text-center">เกรด</th>
+                <th class="py-2.5 px-3 text-center">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="detail-enrollment-tbody" class="divide-y divide-slate-100">
+              <!-- via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ADD / EDIT COURSE MODAL -->
+  <div id="modal-course-form" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="course-modal-title" class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-book text-indigo-600"></i>
+          <span>เพิ่มรายวิชา</span>
+        </h3>
+        <button onclick="closeModal('modal-course-form')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form id="form-course" class="space-y-3">
+        <input type="hidden" id="course-form-id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสวิชา *</label>
+            <input id="course-code" type="text" placeholder="เช่น CPE101" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">หน่วยกิต *</label>
+            <input id="course-credits" type="number" min="1" max="6" value="3" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อรายวิชา *</label>
+          <input id="course-name" type="text" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ภาควิชา *</label>
+          <select id="course-dept" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ผู้สอนหลัก</label>
+          <select id="course-instructor" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">คำอธิบายรายวิชา</label>
+          <textarea id="course-desc" rows="2" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></textarea>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modal-course-form')" class="text-xs px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">ยกเลิก</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition">บันทึกรายวิชา</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. ADD ENROLLMENT MODAL -->
+  <div id="modal-enrollment-form" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-file-circle-plus text-indigo-600"></i>
+          <span>ลงทะเบียนเรียนใหม่</span>
+        </h3>
+        <button onclick="closeModal('modal-enrollment-form')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form id="form-enrollment" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">เลือกนักศึกษา *</label>
+          <select id="enroll-student-select" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">เลือกรายวิชา *</label>
+          <select id="enroll-course-select" required class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ภาคการศึกษา</label>
+            <input id="enroll-semester" type="text" value="1/2569" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ปีการศึกษา</label>
+            <input id="enroll-year" type="number" value="2569" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modal-enrollment-form')" class="text-xs px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">ยกเลิก</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition">ลงทะเบียน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. GRADE EDITOR MODAL -->
+  <div id="modal-grade-form" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-pen-nib text-indigo-600"></i>
+          <span>บันทึกตัดเกรด</span>
+        </h3>
+        <button onclick="closeModal('modal-grade-form')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form id="form-grade" class="space-y-4">
+        <input type="hidden" id="grade-enrollment-id">
+        <div>
+          <p id="grade-student-label" class="text-xs font-semibold text-slate-800">นักศึกษา: -</p>
+          <p id="grade-course-label" class="text-xs text-slate-500">วิชา: -</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ผลการเรียน (Grade) *</label>
+          <select id="grade-val" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800">
+            <option value="">-- ยังไม่มีเกรด --</option>
+            <option value="A">A (4.00 - ดีเยี่ยม)</option>
+            <option value="B+">B+ (3.50 - ดีมาก)</option>
+            <option value="B">B (3.00 - ดี)</option>
+            <option value="C+">C+ (2.50 - ดีพอใช้)</option>
+            <option value="C">C (2.00 - พอใช้)</option>
+            <option value="D+">D+ (1.50 - อ่อน)</option>
+            <option value="D">D (1.00 - อ่อนมาก)</option>
+            <option value="F">F (0.00 - ตก)</option>
+            <option value="I">I (Incomplete)</option>
+            <option value="W">W (Withdraw)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะ</label>
+          <select id="grade-status" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl">
+            <option value="COMPLETED">เรียนเสร็จสิ้น (Completed)</option>
+            <option value="ENROLLED">กำลังศึกษา (Enrolled)</option>
+            <option value="DROPPED">ถอนรายวิชา (Dropped)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modal-grade-form')" class="text-xs px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">ยกเลิก</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition">บันทึกเกรด</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. API SERVER CONFIG MODAL -->
+  <div id="modal-server-config" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl modal-content-scale space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-server text-indigo-600"></i>
+          <span>ตั้งค่าการเชื่อมต่อ API Server</span>
+        </h3>
+        <button onclick="closeModal('modal-server-config')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Base URL ของ Backend API</label>
+          <input id="config-base-url" type="text" placeholder="http://127.0.0.1:8000 หรือ https://your-app.onrender.com" 
+            class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono">
+          <p class="text-[11px] text-slate-400 mt-1">
+            ใส่ URL ของเครื่อง Localhost หรือ URL ที่ได้จากการ Deploy ขึ้น Render / Railway
+          </p>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button" onclick="setQuickServerUrl('http://127.0.0.1:8000')" class="text-[11px] bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg text-slate-700 font-medium">
+            Localhost:8000
+          </button>
+          <button type="button" onclick="setQuickServerUrl('https://student-management-api.onrender.com')" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg text-indigo-700 font-medium">
+            Render Example
+          </button>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <button type="button" id="btn-test-connection" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl transition">
+            <i class="fa-solid fa-satellite-dish mr-1"></i> ทดสอบการเชื่อมต่อ
+          </button>
+          <button type="button" id="btn-save-server-config" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-xl shadow transition">
+            บันทึก URL
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/mockData.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

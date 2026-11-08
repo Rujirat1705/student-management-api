@@ -1,0 +1,410 @@
+{
+  "info": {
+    "name": "Student Management System API",
+    "description": "Collection สำหรับทดสอบ API พร้อม JWT",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health & Overview",
+      "item": [
+        {
+          "name": "Get API Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/stats/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "stats",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication (JWT)",
+      "item": [
+        {
+          "name": "Register New User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@mail.com\",\n  \"password\": \"TestPass1234!\",\n  \"password_confirm\": \"TestPass1234!\",\n  \"first_name\": \"สมชาย\",\n  \"last_name\": \"ใจดี\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login (Obtain Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.access);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "profile",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Departments (CRUD)",
+      "item": [
+        {
+          "name": "List Departments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/departments/"
+          }
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"AI\",\n  \"name\": \"ปัญญาประดิษฐ์และหุ่นยนต์\",\n  \"faculty\": \"คณะวิศวกรรมศาสตร์\",\n  \"description\": \"หลักสูตรขั้นสูงด้าน AI & Robotics\"\n}"
+            },
+            "url": "{{baseUrl}}/api/departments/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Teachers (CRUD)",
+      "item": [
+        {
+          "name": "List Teachers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/teachers/"
+          }
+        },
+        {
+          "name": "Create Teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacher_code\": \"T1005\",\n  \"title\": \"ดร.\",\n  \"first_name\": \"อนันต์\",\n  \"last_name\": \"ศิริโชติ\",\n  \"email\": \"anun.s@university.ac.th\",\n  \"phone\": \"0899998888\",\n  \"department\": 1,\n  \"office\": \"อาคาร 4 ชั้น 5\"\n}"
+            },
+            "url": "{{baseUrl}}/api/teachers/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Courses (CRUD)",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/courses/"
+          }
+        },
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_code\": \"CPE303\",\n  \"name\": \"Cloud Computing Architecture\",\n  \"credits\": 3,\n  \"description\": \"การออกแบบระบบคลาวด์ Microservices และ DevOps\",\n  \"department\": 1,\n  \"instructor\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/courses/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Students (CRUD)",
+      "item": [
+        {
+          "name": "List Students (Filter & Search)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/students/?search=กฤษณะ",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "กฤษณะ"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Student Detail (with enrollments)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/students/1/"
+          }
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"6701999\",\n  \"title\": \"นาย\",\n  \"first_name\": \"ธาวิน\",\n  \"last_name\": \"อัครเดช\",\n  \"gender\": \"M\",\n  \"date_of_birth\": \"2005-02-14\",\n  \"email\": \"thawin.a@mail.university.ac.th\",\n  \"phone\": \"0819991234\",\n  \"address\": \"กรุงเทพฯ\",\n  \"department\": 1,\n  \"advisor\": 1,\n  \"year_level\": 1,\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": "{{baseUrl}}/api/students/"
+          }
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0898887766\",\n  \"year_level\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/students/1/"
+          }
+        },
+        {
+          "name": "Get Student Enrollments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/students/1/enrollments/"
+          }
+        },
+        {
+          "name": "Recalculate Student GPA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/students/1/recalculate_gpa/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Enrollments (CRUD & Grading)",
+      "item": [
+        {
+          "name": "List Enrollments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/enrollments/"
+          }
+        },
+        {
+          "name": "Enroll Student in Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": 1,\n  \"course\": 4,\n  \"semester\": \"2/2569\",\n  \"academic_year\": 2569,\n  \"status\": \"ENROLLED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/enrollments/"
+          }
+        },
+        {
+          "name": "Submit / Update Grade",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grade\": \"A\",\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/enrollments/1/"
+          }
+        }
+      ]
+    }
+  ]
+}
