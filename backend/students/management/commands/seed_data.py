@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
         # 1. สร้างผู้ดูแลระบบ (Admin)
         if not User.objects.filter(username='admin').exists():
-            admin_user = User.objects.create_superuser('admin', 'admin@university.ac.th', 'admin1234')
+            admin_user = User.objects.create_superuser('admin', 'admin@ok.prolay', 'admin1234')
             admin_user.first_name = 'ผู้ดูแล'
             admin_user.last_name = 'ระบบกลาง'
             admin_user.save()
@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         # สร้างผู้ใช้ทั่วไปตัวอย่าง
         if not User.objects.filter(username='student1').exists():
-            std_user = User.objects.create_user('student1', 'student1@university.ac.th', 'password1234')
+            std_user = User.objects.create_user('student1', 'student1@ok.prolay', 'password1234')
             std_user.first_name = 'ภานุพงศ์'
             std_user.last_name = 'มณีโรจน์'
             std_user.save()
@@ -47,19 +47,19 @@ class Command(BaseCommand):
         teachers_data = [
             {
                 'teacher_code': 'T1001', 'title': 'ผศ.ดร.', 'first_name': 'สมชาย', 'last_name': 'ใจดีเลิศ',
-                'email': 'somchai.j@university.ac.th', 'phone': '0812345678', 'department': dept_objs['CPE'], 'office': 'อาคาร 4 ชั้น 3 ห้อง 4301'
+                'email': 'somchai.j@ok.prolay', 'phone': '0812345678', 'department': dept_objs['CPE'], 'office': 'อาคาร 4 ชั้น 3 ห้อง 4301'
             },
             {
                 'teacher_code': 'T1002', 'title': 'ดร.', 'first_name': 'วิภาดา', 'last_name': 'รุ่งเรืองวิทย์',
-                'email': 'wipada.r@university.ac.th', 'phone': '0823456789', 'department': dept_objs['IT'], 'office': 'อาคาร 4 ชั้น 4 ห้อง 4402'
+                'email': 'wipada.r@ok.prolay', 'phone': '0823456789', 'department': dept_objs['IT'], 'office': 'อาคาร 4 ชั้น 4 ห้อง 4402'
             },
             {
                 'teacher_code': 'T1003', 'title': 'อ.', 'first_name': 'กิตติศักดิ์', 'last_name': 'พัฒนศิลป์',
-                'email': 'kittisak.p@university.ac.th', 'phone': '0834567890', 'department': dept_objs['SE'], 'office': 'อาคาร 5 ชั้น 2 ห้อง 5205'
+                'email': 'kittisak.p@ok.prolay', 'phone': '0834567890', 'department': dept_objs['SE'], 'office': 'อาคาร 5 ชั้น 2 ห้อง 5205'
             },
             {
                 'teacher_code': 'T1004', 'title': 'ผศ.', 'first_name': 'ณิชาภัทร', 'last_name': 'สุวรรณโชติ',
-                'email': 'nichapat.s@university.ac.th', 'phone': '0845678901', 'department': dept_objs['DS'], 'office': 'อาคาร 5 ชั้น 3 ห้อง 5308'
+                'email': 'nichapat.s@ok.prolay', 'phone': '0845678901', 'department': dept_objs['DS'], 'office': 'อาคาร 5 ชั้น 3 ห้อง 5308'
             },
         ]
 
@@ -110,31 +110,31 @@ class Command(BaseCommand):
         students_data = [
             {
                 'student_id': '6601001', 'title': 'นาย', 'first_name': 'กฤษณะ', 'last_name': 'แก้วมณี',
-                'gender': 'M', 'date_of_birth': date(2004, 5, 12), 'email': 'kritsana.k@mail.university.ac.th',
+                'gender': 'M', 'date_of_birth': date(2004, 5, 12), 'email': 'kritsana.k@ok.prolay',
                 'phone': '0891112233', 'department': dept_objs['CPE'], 'advisor': teacher_objs['T1001'],
                 'year_level': 2, 'status': 'ACTIVE', 'address': '123/45 ถ.พหลโยธิน จ.กรุงเทพฯ'
             },
             {
                 'student_id': '6601002', 'title': 'นางสาว', 'first_name': 'พิมพ์ชนก', 'last_name': 'วิเศษสมบูรณ์',
-                'gender': 'F', 'date_of_birth': date(2004, 8, 20), 'email': 'pimchanok.w@mail.university.ac.th',
+                'gender': 'F', 'date_of_birth': date(2004, 8, 20), 'email': 'pimchanok.w@ok.prolay',
                 'phone': '0892223344', 'department': dept_objs['IT'], 'advisor': teacher_objs['T1002'],
                 'year_level': 2, 'status': 'ACTIVE', 'address': '88 ม.2 ถ.มิตรภาพ จ.นครราชสีมา'
             },
             {
                 'student_id': '6501003', 'title': 'นาย', 'first_name': 'ธนากร', 'last_name': 'ประเสริฐยิ่ง',
-                'gender': 'M', 'date_of_birth': date(2003, 3, 15), 'email': 'thanakorn.p@mail.university.ac.th',
+                'gender': 'M', 'date_of_birth': date(2003, 3, 15), 'email': 'thanakorn.p@ok.prolay',
                 'phone': '0893334455', 'department': dept_objs['SE'], 'advisor': teacher_objs['T1003'],
                 'year_level': 3, 'status': 'ACTIVE', 'address': '456 ถ.สุขุมวิท จ.ชลบุรี'
             },
             {
                 'student_id': '6701004', 'title': 'นางสาว', 'first_name': 'ณัฐนันท์', 'last_name': 'เตชะสกุล',
-                'gender': 'F', 'date_of_birth': date(2005, 11, 5), 'email': 'nathanan.t@mail.university.ac.th',
+                'gender': 'F', 'date_of_birth': date(2005, 11, 5), 'email': 'nathanan.t@ok.prolay',
                 'phone': '0894445566', 'department': dept_objs['DS'], 'advisor': teacher_objs['T1004'],
                 'year_level': 1, 'status': 'ACTIVE', 'address': '99/1 ถ.งามวงศ์วาน จ.นนทบุรี'
             },
             {
                 'student_id': '6401005', 'title': 'นาย', 'first_name': 'ชลธี', 'last_name': 'วาทินสกุล',
-                'gender': 'M', 'date_of_birth': date(2002, 1, 30), 'email': 'chonlathee.v@mail.university.ac.th',
+                'gender': 'M', 'date_of_birth': date(2002, 1, 30), 'email': 'chonlathee.v@ok.prolay',
                 'phone': '0895556677', 'department': dept_objs['CPE'], 'advisor': teacher_objs['T1001'],
                 'year_level': 4, 'status': 'GRADUATED', 'address': '77 ถ.รัชดาภิเษก จ.กรุงเทพฯ'
             },

@@ -17,7 +17,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class RegisterView(generics.CreateAPIView):
     """
     API สำหรับสมัครสมาชิกผู้ใช้งานใหม่
-    เมื่อสมัครสำเร็จจะส่ง JWT Token (Access & Refresh) และข้อมูลผู้ใช้กลับมาทันที
+    เมื่อสมัครสำเร็จจะส่ง JWT Token (Access & Refresh) และสร้างข้อมูล Student ให้อัตโนมัติ
     """
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
@@ -27,6 +27,33 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # สร้างข้อมูล Student อัตโนมัติและผูกกับผู้สมัครทันที
+        try:
+            from students.models import Student, Department, Teacher
+            dept = Department.objects.first()
+            if not dept:
+                dept = Department.objects.create(code='CPE', name='วิศวกรรมคอมพิวเตอร์', faculty='คณะวิศวกรรมศาสตร์')
+            advisor = Teacher.objects.first()
+            Student.objects.update_or_create(
+                email=user.email,
+                defaults={
+                    'student_id': user.username,
+                    'title': 'นาย',
+                    'first_name': user.first_name or user.username,
+                    'last_name': user.last_name or '',
+                    'gender': 'M',
+                    'date_of_birth': '2005-01-01',
+                    'phone': '0890000000',
+                    'department': dept,
+                    'advisor': advisor,
+                    'year_level': 1,
+                    'status': 'ACTIVE',
+                    'gpa': 0.00
+                }
+            )
+        except Exception as e:
+            pass
 
         # สร้าง JWT token สำหรับผู้ใช้ใหม่ทันที
         refresh = RefreshToken.for_user(user)

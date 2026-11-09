@@ -171,7 +171,7 @@ class ApiService {
       const mockUser = {
         id: 1,
         username: baseName,
-        email: username.includes('@') ? username : `${username}@university.ac.th`,
+        email: username.includes('@') ? username : `${username}@ok.prolay`,
         first_name: isSuper ? 'ผู้ดูแล' : 'ภานุพงศ์',
         last_name: isSuper ? 'ระบบกลาง' : 'มณีโรจน์',
         is_staff: isSuper,

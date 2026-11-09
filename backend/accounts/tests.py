@@ -10,7 +10,7 @@ class AccountsAuthTests(APITestCase):
         url = reverse('auth_register')
         data = {
             'username': 'newuser1',
-            'email': 'newuser1@test.com',
+            'email': 'newuser1@ok.prolay',
             'password': 'Password123!',
             'password_confirm': 'Password123!',
             'first_name': 'สมหมาย',
@@ -23,10 +23,10 @@ class AccountsAuthTests(APITestCase):
 
     def test_user_login(self):
         """ทดสอบการเข้าสู่ระบบเพื่อรับ Token"""
-        User.objects.create_user(username='loginuser', email='login@test.com', password='Password123!')
+        User.objects.create_user(username='loginuser', email='login@ok.prolay', password='Password123!')
         url = reverse('token_obtain_pair')
         data = {
-            'username': 'loginuser',
+            'username': 'login@ok.prolay',
             'password': 'Password123!'
         }
         response = self.client.post(url, data, format='json')

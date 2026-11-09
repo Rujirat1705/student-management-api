@@ -8,15 +8,26 @@ from django.db.models import Q
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Serializer สำหรับ Login โดยรองรับทั้ง Email และ Username
+    และตรวจสอบว่านิสิต/อาจารย์ต้องใช้อีเมลโดเมน @ok.prolay เท่านั้น
     """
     def validate(self, attrs):
         username_or_email = (attrs.get('username') or '').strip()
+        user = None
         if username_or_email:
             user = User.objects.filter(
                 Q(email__iexact=username_or_email) | Q(username__iexact=username_or_email)
             ).first()
-            if user:
-                attrs['username'] = user.username
+
+        if user:
+            # ผู้ใช้งานทั่วไป (นิสิต/อาจารย์) ต้องเป็นโดเมน @ok.prolay เท่านั้น
+            if not user.is_staff and not user.is_superuser:
+                if not (user.email and user.email.lower().endswith('@ok.prolay')):
+                    raise serializers.ValidationError({"detail": "เข้าสู่ระบบไม่สำเร็จ: อนุญาตเฉพาะอีเมลโดเมน @ok.prolay เท่านั้น"})
+            attrs['username'] = user.username
+        else:
+            if '@' in username_or_email and not username_or_email.lower().endswith('@ok.prolay'):
+                raise serializers.ValidationError({"detail": "เข้าสู่ระบบไม่สำเร็จ: อนุญาตเฉพาะอีเมลโดเมน @ok.prolay เท่านั้น"})
+
         return super().validate(attrs)
 
 
@@ -29,7 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Serializer สำหรับการลงทะเบียนผู้ใช้งานใหม่ (ไม่ต้องใช้ username ใช้ email แทนได้)"""
+    """Serializer สำหรับการลงทะเบียนผู้ใช้งานใหม่ (บังคับอีเมล @ok.prolay)"""
     username = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -59,11 +70,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs.get('password') != attrs.get('password_confirm'):
             raise serializers.ValidationError({"password": "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน"})
-        if User.objects.filter(email__iexact=attrs.get('email', '').strip()).exists():
+
+        email = attrs.get('email', '').strip().lower()
+        if not email.endswith('@ok.prolay'):
+            raise serializers.ValidationError({"email": "อีเมลต้องลงท้ายด้วย @ok.prolay เท่านั้น"})
+
+        if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError({"email": "อีเมลนี้มีผู้ใช้งานในระบบแล้ว"})
 
         # สร้าง username อัตโนมัติจาก email ให้ปลอดภัยและไม่ซ้ำในระบบ
-        raw_user = (attrs.get('username') or attrs['email'].split('@')[0]).strip()
+        raw_user = (attrs.get('username') or email.split('@')[0]).strip()
         clean_user = "".join(c for c in raw_user if c.isalnum() or c in ['_', '.']) or 'user'
         username = clean_user
         counter = 1

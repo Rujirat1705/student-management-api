@@ -221,6 +221,12 @@ function initEventListeners() {
     e.preventDefault();
     const u = document.getElementById('login-username').value.trim();
     const p = document.getElementById('login-password').value;
+
+    // ตรวจสอบโดเมน @ok.prolay
+    if (u !== 'admin' && !u.startsWith('admin@') && u.includes('@') && !u.toLowerCase().endsWith('@ok.prolay')) {
+      return Swal.fire('อีเมลไม่ถูกต้อง', 'อนุญาตเฉพาะอีเมลโดเมน @ok.prolay เท่านั้น', 'warning');
+    }
+
     try {
       await window.smsApi.login(u, p);
       closeModal('modal-login');
@@ -249,21 +255,30 @@ function initEventListeners() {
     }
 
     const emailInput = document.getElementById('reg-email');
-    const email = emailInput ? emailInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
     if (!email) {
       return Swal.fire('กรุณากรอกอีเมล', 'กรุณาระบุอีเมลที่ต้องการใช้งาน', 'warning');
     }
+    if (!email.endsWith('@ok.prolay')) {
+      return Swal.fire('อีเมลไม่ถูกต้อง', 'อีเมลต้องลงท้ายด้วย @ok.prolay เท่านั้น (เช่น 67310075@ok.prolay)', 'warning');
+    }
 
-    const regUserEl = document.getElementById('reg-username');
-    const autoUsername = (regUserEl && regUserEl.value.trim()) || email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user${Date.now()}`;
     const firstNameEl = document.getElementById('reg-first-name');
     const lastNameEl = document.getElementById('reg-last-name');
+    const fName = firstNameEl ? firstNameEl.value.trim() : '';
+    const lName = lastNameEl ? lastNameEl.value.trim() : '';
+
+    if (!fName || !lName) {
+      return Swal.fire('กรุณากรอกชื่อและนามสกุล', 'กรุณาระบุชื่อจริงและนามสกุลของคุณ', 'warning');
+    }
+
+    const autoUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user${Date.now()}`;
 
     const data = {
       email: email,
       username: autoUsername,
-      first_name: firstNameEl ? firstNameEl.value.trim() : '',
-      last_name: lastNameEl ? lastNameEl.value.trim() : '',
+      first_name: fName,
+      last_name: lName,
       password: p1,
       password_confirm: p2,
     };
@@ -281,7 +296,7 @@ function initEventListeners() {
       updateAuthUI();
       await loadBaseData();
       switchTab('dashboard');
-      showToast('success', 'สมัครสมาชิกสำเร็จ! เข้าสู่ระบบให้อัตโนมัติ');
+      showToast('success', `ยินดีต้อนรับคุณ ${fName}! สมัครสมาชิกสำเร็จและเข้าสู่ระบบให้อัตโนมัติ`);
     } catch (err) {
       Swal.fire('สมัครสมาชิกไม่สำเร็จ', err.message, 'error');
     } finally {
@@ -642,26 +657,52 @@ async function renderDashboardStudents() {
 // ค้นหานักศึกษาที่ตรงกับผู้ใช้งานปัจจุบัน (สำหรับมุมมองนักศึกษา)
 function findStudentForCurrentUser(studentsList) {
   const user = window.smsApi.user;
-  if (!user || !studentsList || studentsList.length === 0) return null;
+  if (!user) return null;
   const userEmail = (user.email || '').toLowerCase().trim();
   const userName = (user.username || '').toLowerCase().trim();
   const userFirst = (user.first_name || '').toLowerCase().trim();
+  const userLast = (user.last_name || '').toLowerCase().trim();
 
-  // 1. ตรวจสอบจาก email
-  let found = studentsList.find(s => s.email && s.email.toLowerCase().trim() === userEmail);
-  // 2. ตรวจสอบจาก student_id ตรงกับ username
+  // 1. ตรวจสอบจาก email ตรงกัน
+  let found = (studentsList || []).find(s => s.email && s.email.toLowerCase().trim() === userEmail);
+  
+  // 2. ตรวจสอบจาก student_id ตรงกับ username หรือ email prefix
   if (!found) {
-    found = studentsList.find(s => s.student_id && s.student_id.toLowerCase().trim() === userName);
+    found = (studentsList || []).find(s => s.student_id && (
+      s.student_id.toLowerCase().trim() === userName ||
+      userEmail.startsWith(s.student_id.toLowerCase())
+    ));
   }
-  // 3. ตรวจสอบจากชื่อจริง
+  
+  // 3. ตรวจสอบจากชื่อจริงและนามสกุล
   if (!found && userFirst) {
-    found = studentsList.find(s => s.first_name && s.first_name.toLowerCase().trim() === userFirst);
+    found = (studentsList || []).find(s => s.first_name && s.first_name.toLowerCase().trim() === userFirst);
   }
-  // 4. บัญชีทดสอบ student1 -> ผูกกับนักศึกษาคนแรก (66010001 ภานุพงศ์ มณีโรจน์)
-  if (!found && (userName.startsWith('student') || userName === 'student1')) {
-    found = studentsList.find(s => s.student_id === '66010001') || studentsList[0];
+
+  // 4. บัญชีทดสอบ student1
+  if (!found && userName === 'student1') {
+    found = (studentsList || []).find(s => s.student_id === '6601001');
   }
-  return found || studentsList[0];
+
+  // 5. หากยังไม่พบ (เช่น ผู้สมัครสมาชิกใหม่): ใช้ข้อมูลจริงของผู้สมัครเอง ห้ามเอาข้อมูลคนอื่นมาสวมเด็ดขาด!
+  if (!found) {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'นิสิต';
+    found = {
+      id: user.id || 'me',
+      student_id: user.username || userEmail.split('@')[0],
+      first_name: user.first_name || fullName,
+      last_name: user.last_name || '',
+      full_name: fullName,
+      email: user.email || `${user.username}@ok.prolay`,
+      department_name: 'วิศวกรรมคอมพิวเตอร์ (CPE)',
+      advisor_name: 'ผศ.ดร.สมชาย ใจดีเลิศ',
+      year_level: 1,
+      status: 'ACTIVE',
+      gpa: 0.00,
+      gender: 'M',
+    };
+  }
+  return found;
 }
 
 async function loadStudents() {
@@ -1345,8 +1386,9 @@ function updateAuthUI() {
     btnLogin.classList.add('hidden');
     badge.classList.remove('hidden');
     const user = window.smsApi.user;
-    username.textContent = user ? (user.username || 'User') : 'User';
-    role.textContent = isAdmin ? 'Administrator (ผู้ดูแลระบบ)' : 'Student (นักศึกษา)';
+    const fullName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '';
+    username.textContent = fullName || (user ? user.username : 'User');
+    role.textContent = isAdmin ? 'Administrator (ผู้ดูแลระบบ)' : `Student (รหัส: ${user?.username || 'นิสิต'})`;
   } else {
     btnLogin.classList.remove('hidden');
     badge.classList.add('hidden');
@@ -1395,4 +1437,23 @@ function showToast(icon, title) {
     timerProgressBar: true,
   });
   Toast.fire({ icon, title });
+}
+
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) {
+      icon.classList.remove('fa-eye');
+      icon.classList.add('fa-eye-slash');
+    }
+  } else {
+    input.type = 'password';
+    if (icon) {
+      icon.classList.remove('fa-eye-slash');
+      icon.classList.add('fa-eye');
+    }
+  }
 }
