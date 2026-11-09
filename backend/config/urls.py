@@ -59,9 +59,9 @@ def api_root(request):
 
 
 urlpatterns = [
-    # หน้าเว็บหลัก (Frontend Dashboard)
-    path('', serve_index, name='frontend-home'),
-    path('api-root/', api_root, name='api-root'),
+    # RESTful API Root JSON สำหรับ Backend
+    path('', api_root, name='api-root'),
+    path('app/', serve_index, name='frontend-home'),
     path('admin/', admin.site.urls),
 
     # Authentication Endpoints

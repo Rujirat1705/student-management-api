@@ -14,13 +14,24 @@ const API_STORAGE_KEYS = {
 
 class ApiService {
   constructor() {
-    const savedUrl = localStorage.getItem(API_STORAGE_KEYS.BASE_URL);
-    if (savedUrl) {
-      this.baseUrl = savedUrl;
-    } else if (window.location.protocol.startsWith('http') && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
-      this.baseUrl = window.location.origin;
+    // 1. ตรวจสอบว่ามี query param เช่น ?backend=https://... หรือไม่
+    const urlParams = new URLSearchParams(window.location.search);
+    const backendParam = urlParams.get('backend') || urlParams.get('api');
+    if (backendParam) {
+      this.baseUrl = backendParam.replace(/\/$/, '');
+      localStorage.setItem(API_STORAGE_KEYS.BASE_URL, this.baseUrl);
     } else {
-      this.baseUrl = 'http://127.0.0.1:8000';
+      const savedUrl = localStorage.getItem(API_STORAGE_KEYS.BASE_URL);
+      if (savedUrl) {
+        this.baseUrl = savedUrl;
+      } else if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('github.io')) {
+        // เมื่อเปิดจาก Vercel หรือโฮสต์ภายนอก ให้ชี้ไปที่ Render Backend อัตโนมัติ
+        this.baseUrl = 'https://student-management-api-io2g.onrender.com';
+      } else if (window.location.protocol.startsWith('http') && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+        this.baseUrl = window.location.origin;
+      } else {
+        this.baseUrl = 'http://127.0.0.1:8000';
+      }
     }
     this.accessToken = localStorage.getItem(API_STORAGE_KEYS.ACCESS_TOKEN) || null;
     this.refreshToken = localStorage.getItem(API_STORAGE_KEYS.REFRESH_TOKEN) || null;

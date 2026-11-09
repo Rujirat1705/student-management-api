@@ -15,3 +15,4 @@ echo "==> 4. Seeding initial data (Admin, Test Student, Departments, Courses)...
 python backend/manage.py seed_data
 
 echo "==> Build completed successfully! 🚀"
+
