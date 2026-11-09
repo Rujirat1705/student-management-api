@@ -17,12 +17,28 @@ from .serializers import (
 )
 
 
+class IsAdminOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission:
+    - GET / HEAD / OPTIONS → ทุกคนที่ล็อกอินแล้วทำได้
+    - POST / PUT / PATCH / DELETE → เฉพาะ Admin (is_staff) เท่านั้น
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_staff or request.user.is_superuser
+
+
 class DepartmentViewSet(viewsets.ModelViewSet):
     """
     CRUD API สำหรับจัดการข้อมูลภาควิชา
     - รองรับการค้นหาตามรหัส (code) หรือชื่อ (name)
     - รองรับการเรียงลำดับ
+    - Admin เท่านั้น: เพิ่ม / แก้ไข / ลบ
     """
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Department.objects.all().prefetch_related('students', 'courses')
     serializer_class = DepartmentSerializer
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
@@ -36,7 +52,9 @@ class TeacherViewSet(viewsets.ModelViewSet):
     CRUD API สำหรับจัดการข้อมูลอาจารย์
     - รองรับการกรองตามภาควิชา (department)
     - รองรับการค้นหาตามชื่อ-นามสกุล, รหัสอาจารย์, อีเมล
+    - Admin เท่านั้น: เพิ่ม / แก้ไข / ลบ
     """
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Teacher.objects.select_related('department').all()
     serializer_class = TeacherSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
@@ -51,7 +69,9 @@ class CourseViewSet(viewsets.ModelViewSet):
     CRUD API สำหรับจัดการข้อมูลรายวิชา
     - รองรับการกรองตามภาควิชา (department) หรืออาจารย์ผู้สอน (instructor)
     - รองรับการค้นหารหัสวิชา หรือชื่อวิชา
+    - Admin เท่านั้น: เพิ่ม / แก้ไข / ลบ
     """
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Course.objects.select_related('department', 'instructor').prefetch_related('enrollments').all()
     serializer_class = CourseSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
@@ -67,7 +87,9 @@ class StudentViewSet(viewsets.ModelViewSet):
     - ดูรายละเอียดแบบเจาะลึกพร้อมประวัติการเรียน
     - กรองข้อมูลตาม ภาควิชา, ชั้นปี, เพศ, สถานะ, อาจารย์ที่ปรึกษา
     - ค้นหาด้วยรหัสนักศึกษา, ชื่อ, นามสกุล หรืออีเมล
+    - Admin เท่านั้น: เพิ่ม / แก้ไข / ลบ
     """
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Student.objects.select_related('department', 'advisor').prefetch_related('enrollments__course').all()
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
     filterset_fields = ('department', 'year_level', 'status', 'gender', 'advisor')
@@ -107,7 +129,9 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     - บันทึกการลงทะเบียน
     - ตัดเกรด/อัปเดตเกรด
     - กรองตามนักศึกษา, รายวิชา, ภาคการศึกษา, ปีการศึกษา และสถานะ
+    - Admin เท่านั้น: เพิ่ม / แก้ไข / ลบ / บันทึกเกรด
     """
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Enrollment.objects.select_related('student', 'course').all()
     serializer_class = EnrollmentSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
