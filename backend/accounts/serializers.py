@@ -7,11 +7,19 @@ from django.db.models import Q
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Serializer สำหรับ Login โดยรองรับทั้ง Email และ Username
+    Serializer สำหรับ Login โดยรองรับทั้ง email และ username
+    รับ field ชื่อ 'email' หรือ 'username' ก็ได้ทั้งคู่
     และตรวจสอบว่านิสิต/อาจารย์ต้องใช้อีเมลโดเมน @ok.prolay เท่านั้น
     """
+    # เพิ่ม field 'email' เพื่อให้ Postman / client ส่ง email มาได้โดยตรง
+    email = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
     def validate(self, attrs):
-        username_or_email = (attrs.get('username') or '').strip()
+        # รับได้ทั้ง 'email' และ 'username' field
+        username_or_email = (
+            attrs.get('email') or attrs.get('username') or ''
+        ).strip()
+
         user = None
         if username_or_email:
             user = User.objects.filter(
@@ -27,6 +35,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         else:
             if '@' in username_or_email and not username_or_email.lower().endswith('@ok.prolay'):
                 raise serializers.ValidationError({"detail": "เข้าสู่ระบบไม่สำเร็จ: อนุญาตเฉพาะอีเมลโดเมน @ok.prolay เท่านั้น"})
+            # ถ้าหาไม่เจอเลยให้ตั้ง username เป็นค่าที่ส่งมาเพื่อให้ parent validate ทำ error เอง
+            if not attrs.get('username'):
+                attrs['username'] = username_or_email
 
         return super().validate(attrs)
 
