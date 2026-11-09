@@ -2,8 +2,16 @@ from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import RegisterSerializer, UserSerializer, CustomTokenObtainPairSerializer
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    API สำหรับเข้าสู่ระบบ โดยรองรับการเข้าสู่ระบบด้วย Email หรือ Username
+    """
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class RegisterView(generics.CreateAPIView):

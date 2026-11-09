@@ -158,11 +158,12 @@ class ApiService {
   // =================== AUTHENTICATION ===================
   async login(username, password) {
     if (this.isMockMode) {
-      const isSuper = username === 'admin';
+      const isSuper = username === 'admin' || username.startsWith('admin@');
+      const baseName = username.split('@')[0];
       const mockUser = {
         id: 1,
-        username: username,
-        email: `${username}@university.ac.th`,
+        username: baseName,
+        email: username.includes('@') ? username : `${username}@university.ac.th`,
         first_name: isSuper ? 'ผู้ดูแล' : 'ภานุพงศ์',
         last_name: isSuper ? 'ระบบกลาง' : 'มณีโรจน์',
         is_staff: isSuper,

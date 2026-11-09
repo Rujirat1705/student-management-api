@@ -1,6 +1,23 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.db.models import Q
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializer สำหรับ Login โดยรองรับทั้ง Email และ Username
+    """
+    def validate(self, attrs):
+        username_or_email = attrs.get('username')
+        if username_or_email:
+            user = User.objects.filter(
+                Q(email__iexact=username_or_email) | Q(username__iexact=username_or_email)
+            ).first()
+            if user:
+                attrs['username'] = user.username
+        return super().validate(attrs)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -12,7 +29,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Serializer สำหรับการลงทะเบียนผู้ใช้งานใหม่"""
+    """Serializer สำหรับการลงทะเบียนผู้ใช้งานใหม่ (ไม่ต้องใช้ username ใช้ email แทนได้)"""
+    username = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=150
+    )
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -35,10 +57,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs.get('password') != attrs.get('password_confirm'):
             raise serializers.ValidationError({"password": "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน"})
-        if User.objects.filter(email=attrs['email']).exists():
+        if User.objects.filter(email=attrs.get('email')).exists():
             raise serializers.ValidationError({"email": "อีเมลนี้มีผู้ใช้งานในระบบแล้ว"})
+
+        # หากไม่ได้กรอก username ให้ดึงจาก email อัตโนมัติ
+        if not attrs.get('username'):
+            base_username = attrs['email'].split('@')[0]
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            attrs['username'] = username
+        elif User.objects.filter(username=attrs.get('username')).exists():
+            raise serializers.ValidationError({"username": "ชื่อผู้ใช้นี้มีอยู่ในระบบแล้ว"})
+
         return attrs
 
     def create(self, validated_data):
@@ -51,4 +86,3 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', '')
         )
         return user
-

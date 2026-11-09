@@ -35,9 +35,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   updateServerStatusUI();
 
-  // โหลดข้อมูลพื้นฐานและ Dashboard
-  await loadBaseData();
-  await loadDashboard();
+  // โหลดข้อมูลพื้นฐานและตรวจสอบสิทธิ์
+  if (window.smsApi && window.smsApi.isAuthenticated()) {
+    await loadBaseData();
+    await loadDashboard();
+  } else {
+    switchTab('dashboard');
+  }
 });
 
 // =================== TAB NAVIGATION ===================
@@ -59,11 +63,8 @@ function switchTab(tabName) {
     sec.classList.remove('active');
   });
 
-  const activeSec = document.getElementById(`tab-${tabName}`);
-  if (activeSec) {
-    activeSec.classList.remove('hidden');
-    activeSec.classList.add('active');
-  }
+  const authLockScreen = document.getElementById('auth-lock-screen');
+  const isAuth = window.smsApi && window.smsApi.isAuthenticated();
 
   // ปรับ Title บน Header
   const titles = {
@@ -78,6 +79,21 @@ function switchTab(tabName) {
   if (titles[tabName]) {
     document.getElementById('page-title').textContent = titles[tabName].title;
     document.getElementById('page-subtitle').textContent = titles[tabName].subtitle;
+  }
+
+  // หากยังไม่เข้าสู่ระบบ ให้แสดงหน้าจอล็อกทุกหน้า
+  if (!isAuth) {
+    if (authLockScreen) authLockScreen.classList.remove('hidden');
+    return;
+  }
+
+  // หากเข้าสู่ระบบแล้ว ซ่อนหน้าจอล็อกและแสดงเนื้อหาแท็บ
+  if (authLockScreen) authLockScreen.classList.add('hidden');
+
+  const activeSec = document.getElementById(`tab-${tabName}`);
+  if (activeSec) {
+    activeSec.classList.remove('hidden');
+    activeSec.classList.add('active');
   }
 
   // โหลดข้อมูลตามแต่ละแท็บ
@@ -186,14 +202,15 @@ function initEventListeners() {
   // Login Form
   document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const u = document.getElementById('login-username').value;
+    const u = document.getElementById('login-username').value.trim();
     const p = document.getElementById('login-password').value;
     try {
       await window.smsApi.login(u, p);
       closeModal('modal-login');
       updateAuthUI();
+      await loadBaseData();
       switchTab(appState.currentTab);
-      showToast('success', `ยินดีต้อนรับคุณ ${u}! เข้าสู่ระบบสำเร็จ`);
+      showToast('success', `ยินดีต้อนรับคุณ ${window.smsApi.user?.first_name || u}! เข้าสู่ระบบสำเร็จ`);
     } catch (err) {
       Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
     }
@@ -213,11 +230,13 @@ function initEventListeners() {
     if (!/[a-zA-Z]/.test(p1)) {
       return Swal.fire('รูปแบบรหัสผ่านไม่ถูกต้อง', 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว', 'warning');
     }
+
+    const email = document.getElementById('reg-email').value.trim();
     const data = {
-      username: document.getElementById('reg-username').value,
-      email: document.getElementById('reg-email').value,
-      first_name: document.getElementById('reg-first-name').value,
-      last_name: document.getElementById('reg-last-name').value,
+      email: email,
+      username: email.split('@')[0],
+      first_name: document.getElementById('reg-first-name').value.trim(),
+      last_name: document.getElementById('reg-last-name').value.trim(),
       password: p1,
       password_confirm: p2,
     };
@@ -225,6 +244,8 @@ function initEventListeners() {
       await window.smsApi.register(data);
       closeModal('modal-register');
       updateAuthUI();
+      await loadBaseData();
+      switchTab(appState.currentTab);
       showToast('success', 'สมัครสมาชิกสำเร็จ! เข้าสู่ระบบให้อัตโนมัติ');
     } catch (err) {
       Swal.fire('สมัครสมาชิกไม่สำเร็จ', err.message, 'error');
@@ -621,7 +642,7 @@ async function loadStudents() {
             <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-xs">
               <i class="fa-solid fa-lock"></i>
             </div>
-            <h4 class="text-base font-bold text-slate-800">ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลนักศึกษา</h4>
+            <h4 class="text-base font-bold text-slate-800">เข้าสู่ระบบก่อนนะจ่ะ</h4>
             <p class="text-xs text-slate-500">กรุณาเข้าสู่ระบบด้วยบัญชีแอดมินหรือบัญชีนักศึกษาเพื่อเข้าถึงและจัดการข้อมูลในหน้านี้</p>
             <button onclick="openModal('modal-login')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow transition">
               <i class="fa-solid fa-right-to-bracket"></i>
@@ -1036,7 +1057,7 @@ async function loadEnrollments() {
             <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-xs">
               <i class="fa-solid fa-lock"></i>
             </div>
-            <h4 class="text-base font-bold text-slate-800">ต้องเข้าสู่ระบบก่อนถึงจะเห็นข้อมูลการลงทะเบียนและตัดเกรด</h4>
+            <h4 class="text-base font-bold text-slate-800">เข้าสู่ระบบก่อนนะจ่ะ</h4>
             <p class="text-xs text-slate-500">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้เพื่อดูประวัติการลงทะเบียนรายวิชาและจัดการผลการเรียน</p>
             <button onclick="openModal('modal-login')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow transition">
               <i class="fa-solid fa-right-to-bracket"></i>
