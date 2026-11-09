@@ -1358,7 +1358,7 @@ function updateServerStatusUI() {
   const redocLink = document.getElementById('link-redoc');
   const schemaLink = document.getElementById('link-schema');
   if (swaggerLink) swaggerLink.href = `${window.smsApi.baseUrl}/api/docs/`;
-  if (redocLink) redocLink.href = `${window.smsApi.baseUrl}/api/redoc/`;
+  if (redocLink) redocLink.href = 'redoc.html';
   if (schemaLink) schemaLink.href = `${window.smsApi.baseUrl}/api/schema/`;
 
   // Status pill is hidden — no need to update its style

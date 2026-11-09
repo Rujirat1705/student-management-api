@@ -25,3 +25,4 @@ EXPOSE 8000
 
 # คำสั่งเริ่มต้น: migrate -> seed data -> รัน gunicorn
 CMD sh -c "python backend/manage.py migrate && python backend/manage.py seed_data && gunicorn --chdir backend config.wsgi:application --bind 0.0.0.0:${PORT:-8000}"
+

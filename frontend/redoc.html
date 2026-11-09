@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>UniCore SMS — Redoc API Documentation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Montserrat:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', 'Kanit', sans-serif;
+      background-color: #fafafa;
+    }
+    #top-nav {
+      background: #4f46e5;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #top-nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    #top-nav a:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    #loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      color: #4f46e5;
+      text-align: center;
+    }
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #e0e7ff;
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="top-nav">
+    <div style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-graduation-cap"></i> UniCore SMS — Redoc API
+    </div>
+    <a href="./">
+      <i class="fa-solid fa-arrow-left"></i> กลับสู่หน้า Dashboard
+    </a>
+  </div>
+
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <h3 style="margin: 0; font-size: 18px; color: #1e1b4b;">กำลังโหลดเอกสาร API...</h3>
+    <p style="margin: 8px 0 0; font-size: 13px; color: #64748b;" id="loading-desc">กำลังเชื่อมต่อกับ Backend OpenAPI Schema</p>
+  </div>
+
+  <div id="redoc-container"></div>
+
+  <!-- Redoc v2.5.4 Classic Script (แก้ปัญหา White Screen จาก ES Module ใน v3) -->
+  <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.4/bundles/redoc.standalone.js"></script>
+  <script>
+    (function() {
+      const savedUrl = localStorage.getItem('sms_api_base_url');
+      const defaultUrl = 'https://student-management-api-io2g.onrender.com';
+      const baseUrl = (savedUrl || defaultUrl).replace(/\/$/, '');
+      const schemaUrl = `${baseUrl}/api/schema/`;
+
+      const desc = document.getElementById('loading-desc');
+      if (desc) desc.textContent = `กำลังดึงข้อมูลจาก: ${schemaUrl}`;
+
+      try {
+        Redoc.init(
+          schemaUrl,
+          {
+            scrollYOffset: 60,
+            hideDownloadButton: false,
+            expandResponses: '200,201',
+            theme: {
+              colors: {
+                primary: {
+                  main: '#4f46e5'
+                }
+              },
+              typography: {
+                fontSize: '14px',
+                fontFamily: '"Roboto", "Kanit", sans-serif',
+                headings: {
+                  fontFamily: '"Montserrat", "Kanit", sans-serif',
+                  fontWeight: '700'
+                }
+              }
+            }
+          },
+          document.getElementById('redoc-container'),
+          function(err) {
+            const loading = document.getElementById('loading-state');
+            if (loading) loading.style.display = 'none';
+            if (err) {
+              console.error('Redoc failed to render:', err);
+              if (loading) {
+                loading.style.display = 'flex';
+                loading.innerHTML = `
+                  <h3 style="color: #dc2626;">ไม่สามารถโหลดเอกสารได้</h3>
+                  <p style="color: #64748b; max-width: 450px;">ไม่สามารถเชื่อมต่อกับ Schema ที่ ${schemaUrl} ได้ กรุณาตรวจสอบว่าเซิร์ฟเวอร์ Backend ออนไลน์อยู่หรือไม่</p>
+                  <a href="./" style="margin-top: 12px; color: #4f46e5; text-decoration: underline;">กลับหน้าหลัก</a>
+                `;
+              }
+            }
+          }
+        );
+      } catch (e) {
+        console.error('Init error:', e);
+      }
+    })();
+  </script>
+</body>
+</html>
