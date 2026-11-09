@@ -146,6 +146,12 @@ class Command(BaseCommand):
                 'phone': '0895556677', 'department': dept_objs['CPE'], 'advisor': teacher_objs['T1001'],
                 'year_level': 4, 'status': 'GRADUATED', 'address': '77 ถ.รัชดาภิเษก จ.กรุงเทพฯ'
             },
+            {
+                'student_id': 'student1', 'title': 'นาย', 'first_name': 'สมชาย', 'last_name': 'ใจดี',
+                'gender': 'M', 'date_of_birth': date(2004, 3, 10), 'email': 'student1@ok.prolay',
+                'phone': '0812345678', 'department': dept_objs['CPE'], 'advisor': teacher_objs['T1001'],
+                'year_level': 2, 'status': 'ACTIVE', 'address': '100 ถ.มิตรภาพ จ.ขอนแก่น'
+            },
         ]
 
         student_objs = {}
@@ -179,6 +185,11 @@ class Command(BaseCommand):
             {'student': student_objs['6401005'], 'course': course_objs['CPE101'], 'semester': '1/2566', 'academic_year': 2566, 'grade': 'A', 'status': 'COMPLETED'},
             {'student': student_objs['6401005'], 'course': course_objs['CPE201'], 'semester': '2/2566', 'academic_year': 2566, 'grade': 'A', 'status': 'COMPLETED'},
             {'student': student_objs['6401005'], 'course': course_objs['SE202'], 'semester': '1/2567', 'academic_year': 2567, 'grade': 'B+', 'status': 'COMPLETED'},
+
+            # student1 (สมชาย CPE ปี 2)
+            {'student': student_objs['student1'], 'course': course_objs['CPE101'], 'semester': '1/2569', 'academic_year': 2569, 'grade': None, 'status': 'ENROLLED'},
+            {'student': student_objs['student1'], 'course': course_objs['IT301'], 'semester': '1/2569', 'academic_year': 2569, 'grade': None, 'status': 'ENROLLED'},
+            {'student': student_objs['student1'], 'course': course_objs['SE202'], 'semester': '1/2569', 'academic_year': 2569, 'grade': None, 'status': 'ENROLLED'},
         ]
 
         for e in enrollments_data:

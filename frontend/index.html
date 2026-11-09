@@ -81,6 +81,10 @@
             <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
             <span>การลงทะเบียน & ตัดเกรด</span>
           </button>
+          <button data-tab="schedule" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+            <span>ตารางเรียน (Schedule)</span>
+          </button>
           <button data-tab="departments" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
             <i class="fa-solid fa-building-columns w-5 text-center"></i>
             <span>ภาควิชา & คณาจารย์</span>
@@ -464,6 +468,115 @@
               <h3 class="font-bold text-slate-900 text-base">ทำเนียบคณาจารย์และอาจารย์ที่ปรึกษา (Faculty Members)</h3>
             </div>
             <div id="teachers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SECTION: CLASS SCHEDULE (ตารางเรียนของนิสิต) ================= -->
+        <section id="tab-schedule" class="tab-content hidden space-y-6">
+          <!-- Control & Summary Card -->
+          <div class="glass-card p-6 rounded-2xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shadow-xs">
+                  <i class="fa-solid fa-calendar-days"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-base font-bold text-slate-900" id="schedule-header-student-name">ตารางเรียนของนิสิต</h3>
+                    <span id="schedule-role-badge" class="text-[11px] bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-semibold border border-indigo-200">
+                      ภาคการศึกษา 1/2569
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500 mt-0.5" id="schedule-header-student-desc">
+                    แสดงวัน เวลาเรียน และห้องเรียนตามรายวิชาที่ลงทะเบียน
+                  </p>
+                </div>
+              </div>
+
+              <!-- Controls: Student Selector for Admin & Print Button -->
+              <div class="flex flex-wrap items-center gap-3">
+                <div id="schedule-student-selector-box" class="flex items-center gap-2">
+                  <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">เลือกนิสิต:</label>
+                  <select id="schedule-student-select" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <!-- Populated dynamically via JS -->
+                  </select>
+                </div>
+
+                <button type="button" onclick="window.print()" class="text-xs bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2 border border-slate-200 rounded-xl shadow-2xs transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-print text-indigo-600"></i> พิมพ์ตารางเรียน
+                </button>
+              </div>
+            </div>
+
+            <!-- Schedule Stats Chips -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-100">
+              <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                <span class="text-[11px] text-slate-500 block">รหัสนักศึกษา</span>
+                <span class="text-sm font-bold text-slate-800 font-mono" id="schedule-stat-id">-</span>
+              </div>
+              <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                <span class="text-[11px] text-slate-500 block">ภาควิชา</span>
+                <span class="text-sm font-bold text-indigo-600" id="schedule-stat-dept">-</span>
+              </div>
+              <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                <span class="text-[11px] text-slate-500 block">วิชาที่ลงทะเบียน</span>
+                <span class="text-sm font-bold text-slate-800" id="schedule-stat-courses">0 วิชา</span>
+              </div>
+              <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                <span class="text-[11px] text-slate-500 block">หน่วยกิตรวม</span>
+                <span class="text-sm font-bold text-emerald-600" id="schedule-stat-credits">0 หน่วยกิต</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timetable Grid -->
+          <div class="glass-card p-6 rounded-2xl overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-table-cells text-indigo-600"></i>
+                <span>ตารางเรียนประจำสัปดาห์ (Weekly Timetable)</span>
+              </h4>
+              <span class="text-xs text-slate-400 font-medium">เวลาเรียนมาตรฐาน 3 ชั่วโมง/วิชา</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[760px] border-collapse text-xs" id="schedule-grid-table">
+                <thead>
+                  <tr class="bg-slate-100/80 text-slate-700 font-semibold border-b border-slate-200">
+                    <th class="py-3 px-3 text-left w-32 rounded-tl-xl">วัน / เวลา</th>
+                    <th class="py-3 px-2 text-center w-24 border-l border-slate-200 text-slate-400">
+                      08:00 - 09:00<br><span class="text-[10px] font-normal">เตรียมตัว</span>
+                    </th>
+                    <th class="py-3 px-3 text-center border-l border-slate-200 bg-indigo-50/40 text-indigo-900 w-64">
+                      09:00 - 12:00<br><span class="text-[10px] font-normal text-indigo-600 font-medium">ช่วงเช้า (3 ชม.)</span>
+                    </th>
+                    <th class="py-3 px-2 text-center w-28 border-l border-slate-200 bg-amber-50/50 text-amber-800">
+                      12:00 - 13:00<br><span class="text-[10px] font-normal text-amber-600">🍱 พักกลางวัน</span>
+                    </th>
+                    <th class="py-3 px-3 text-center border-l border-slate-200 bg-purple-50/40 text-purple-900 w-64">
+                      13:00 - 16:00<br><span class="text-[10px] font-normal text-purple-600 font-medium">ช่วงบ่าย (3 ชม.)</span>
+                    </th>
+                    <th class="py-3 px-2 text-center w-24 border-l border-slate-200 text-slate-400 rounded-tr-xl">
+                      16:00 - 17:00<br><span class="text-[10px] font-normal">ที่ปรึกษา</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="schedule-table-body" class="divide-y divide-slate-100">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Enrolled Courses List Card -->
+          <div class="glass-card p-6 rounded-2xl">
+            <h4 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-indigo-600"></i>
+              <span>รายละเอียดรายวิชาและห้องเรียน (Enrolled Courses List)</span>
+            </h4>
+            <div id="schedule-courses-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <!-- Populated via JS -->
             </div>
           </div>
@@ -1085,8 +1198,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/mockData.js?v=20261109_v7"></script>
-  <script src="js/api.js?v=20261109_v7"></script>
-  <script src="js/app.js?v=20261109_v7"></script>
+  <script src="js/mockData.js?v=20261109_v8"></script>
+  <script src="js/api.js?v=20261109_v8"></script>
+  <script src="js/app.js?v=20261109_v8"></script>
 </body>
 </html>

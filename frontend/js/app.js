@@ -99,6 +99,7 @@ function switchTab(tabName) {
     'courses': { title: 'รายวิชาที่เปิดสอน (Courses)', subtitle: 'จัดการหลักสูตรและรายวิชาที่เปิดสอนในแต่ละภาควิชา' },
     'enrollments': { title: 'การลงทะเบียนเรียน & ตัดเกรด (Enrollment & Grading)', subtitle: 'บันทึกการลงทะเบียนรายวิชา และประมวลผลเกรดสะสม' },
     'departments': { title: 'ภาควิชา & คณาจารย์ (Departments & Faculty)', subtitle: 'โครงสร้างภาควิชาและทำเนียบคณาจารย์ที่ปรึกษา' },
+    'schedule': { title: 'ตารางเรียนของนิสิต (Class Schedule)', subtitle: 'ตารางแสดงวันและเวลาเรียนตามรายวิชาที่ลงทะเบียนในภาคการศึกษา' },
     'api-docs': { title: 'เอกสาร API & เกณฑ์การประเมิน', subtitle: 'Interactive Swagger UI, Redoc และเกณฑ์คะแนนโครงงาน 100 คะแนนเต็ม' },
   };
 
@@ -124,6 +125,9 @@ function switchTab(tabName) {
     case 'departments':
       renderDepartments();
       renderTeachers();
+      break;
+    case 'schedule':
+      loadSchedule();
       break;
   }
 }
@@ -160,6 +164,14 @@ function initEventListeners() {
     switchTab(appState.currentTab);
     showToast('success', 'รีเฟรชข้อมูลล่าสุดสำเร็จ');
   });
+
+  // Schedule Student Selector Change
+  const scheduleSelect = document.getElementById('schedule-student-select');
+  if (scheduleSelect) {
+    scheduleSelect.addEventListener('change', (e) => {
+      loadSchedule(e.target.value);
+    });
+  }
 
   // Mock Mode Toggle
   const btnToggleMock = document.getElementById('btn-toggle-mock');
@@ -1463,4 +1475,381 @@ function togglePasswordVisibility(inputId, btn) {
       icon.classList.add('fa-eye');
     }
   }
+}
+
+// =================== CLASS SCHEDULE (ตารางเรียนของนิสิต) ===================
+
+/**
+ * แผนที่ตารางเวลามาตรฐานสำหรับรายวิชาหลัก (กำหนดวัน เวลา ห้องเรียน แบบคงที่)
+ * ทุกนิสิตที่ลงวิชาเดียวกันจะได้วัน เวลา และห้องเรียนเหมือนกัน 100%
+ */
+const COURSE_SCHEDULE_MAP = {
+  'CPE101': {
+    day: 1,
+    dayName: 'วันจันทร์',
+    slot: 'morning',
+    time: '09:00 - 12:00',
+    room: 'LAB-401 (ปฏิบัติการคอมฯ)',
+    color: 'indigo',
+    instructor: 'ผศ.ดร.สมชาย ใจดีเลิศ',
+  },
+  'CPE201': {
+    day: 2,
+    dayName: 'วันอังคาร',
+    slot: 'afternoon',
+    time: '13:00 - 16:00',
+    room: 'LAB-402 (โครงสร้างข้อมูล)',
+    color: 'cyan',
+    instructor: 'ผศ.ดร.สมชาย ใจดีเลิศ',
+  },
+  'IT301': {
+    day: 3,
+    dayName: 'วันพุธ',
+    slot: 'morning',
+    time: '09:00 - 12:00',
+    room: 'ROOM-502 (ห้องบรรยาย)',
+    color: 'purple',
+    instructor: 'ดร.วิภาดา รุ่งเรืองวิทย์',
+  },
+  'SE202': {
+    day: 4,
+    dayName: 'วันพฤหัสบดี',
+    slot: 'afternoon',
+    time: '13:00 - 16:00',
+    room: 'ROOM-501 (ห้องบรรยาย)',
+    color: 'amber',
+    instructor: 'อ.กิตติศักดิ์ พัฒนศิลป์',
+  },
+  'DS102': {
+    day: 5,
+    dayName: 'วันศุกร์',
+    slot: 'morning',
+    time: '09:00 - 12:00',
+    room: 'LAB-303 (วิเคราะห์ข้อมูล)',
+    color: 'emerald',
+    instructor: 'ผศ.ณิชาภัทร สุวรรณโชติ',
+  },
+};
+
+/**
+ * คำนวณวันและเวลาเรียนของวิชาแบบคงที่ (Deterministic Hashing)
+ * หากเป็นวิชาใหม่ที่เพิ่มเข้ามา ก็จะถูกคำนวณวัน เวลา และห้อง ให้เหมือนกันทุกคนเสมอ
+ */
+function getCourseScheduleSlot(courseCode) {
+  const code = (courseCode || '').toUpperCase().trim();
+  if (COURSE_SCHEDULE_MAP[code]) {
+    return COURSE_SCHEDULE_MAP[code];
+  }
+
+  const days = [
+    { day: 1, dayName: 'วันจันทร์', color: 'indigo' },
+    { day: 2, dayName: 'วันอังคาร', color: 'pink' },
+    { day: 3, dayName: 'วันพุธ', color: 'emerald' },
+    { day: 4, dayName: 'วันพฤหัสบดี', color: 'amber' },
+    { day: 5, dayName: 'วันศุกร์', color: 'cyan' },
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const dayIndex = Math.abs(hash) % days.length;
+  const isMorning = Math.abs(hash >> 3) % 2 === 0;
+  const roomNum = (Math.abs(hash) % 8) + 1;
+  const dayInfo = days[dayIndex];
+
+  return {
+    day: dayInfo.day,
+    dayName: dayInfo.dayName,
+    slot: isMorning ? 'morning' : 'afternoon',
+    time: isMorning ? '09:00 - 12:00' : '13:00 - 16:00',
+    room: `ROOM-40${roomNum}`,
+    color: dayInfo.color,
+    instructor: 'คณาจารย์ประจำภาควิชา',
+  };
+}
+
+/**
+ * โหลดและแสดงผลตารางเรียนของนิสิต
+ */
+async function loadSchedule(selectedStudentId = null) {
+  try {
+    // 1. ตรวจสอบและดึงข้อมูลพื้นฐานที่จำเป็น
+    if (!appState.students || appState.students.length === 0) {
+      const res = await window.smsApi.getStudents();
+      appState.students = res.results || res;
+    }
+    if (!appState.courses || appState.courses.length === 0) {
+      const res = await window.smsApi.getCourses();
+      appState.courses = res.results || res;
+    }
+    if (!appState.enrollments || appState.enrollments.length === 0) {
+      const res = await window.smsApi.getEnrollments();
+      appState.enrollments = res.results || res;
+    }
+
+    const isAdmin = window.smsApi.isAdmin();
+    const studentSelectBox = document.getElementById('schedule-student-selector-box');
+    const studentSelect = document.getElementById('schedule-student-select');
+
+    // 2. ระบุตัวตนของนิสิตเป้าหมาย
+    let targetStudent = null;
+
+    if (isAdmin) {
+      // แอดมิน: แสดงช่องเลือกดูตารางเรียนของนิสิตคนใดก็ได้
+      if (studentSelectBox) studentSelectBox.classList.remove('hidden');
+
+      // เติมรายชื่อนิสิตใน Dropdown
+      if (studentSelect && studentSelect.children.length <= 1) {
+        studentSelect.innerHTML = appState.students.map(s => `
+          <option value="${s.id || s.student_id}">
+            ${s.student_id} - ${s.title || ''}${s.first_name} ${s.last_name}
+          </option>
+        `).join('');
+      }
+
+      if (selectedStudentId) {
+        targetStudent = appState.students.find(s => String(s.id) === String(selectedStudentId) || String(s.student_id) === String(selectedStudentId));
+        if (studentSelect) studentSelect.value = selectedStudentId;
+      } else if (studentSelect && studentSelect.value) {
+        targetStudent = appState.students.find(s => String(s.id) === String(studentSelect.value) || String(s.student_id) === String(studentSelect.value));
+      }
+
+      if (!targetStudent) {
+        targetStudent = appState.students[0];
+      }
+    } else {
+      // นิสิต: ซ่อน Dropdown และล็อกให้ดูเฉพาะตารางของตนเองเท่านั้น
+      if (studentSelectBox) studentSelectBox.classList.add('hidden');
+      targetStudent = findStudentForCurrentUser(appState.students);
+    }
+
+    if (!targetStudent) {
+      console.warn('Schedule: Target student not found');
+      return;
+    }
+
+    // 3. ดึงรายการวิชาที่นิสิตคนนี้ลงทะเบียนเรียน
+    let studentEnrollments = appState.enrollments.filter(e => {
+      const matchId = String(e.student) === String(targetStudent.id) || String(e.student_id) === String(targetStudent.id);
+      const matchCode = String(e.student_code) === String(targetStudent.student_id) || String(e.student) === String(targetStudent.student_id);
+      return matchId || matchCode;
+    });
+
+    // หากยังไม่พบ อาจเกิดจากเป็นนิสิตที่เพิ่งสมัครใหม่ ให้ลองดึงข้อมูลจาก detail API
+    if (studentEnrollments.length === 0 && targetStudent.id) {
+      try {
+        const detail = await window.smsApi.getStudent(targetStudent.id);
+        if (detail && detail.enrollments && detail.enrollments.length > 0) {
+          studentEnrollments = detail.enrollments;
+        }
+      } catch (e) {
+        // เงียบไว้
+      }
+    }
+
+    // 4. ประกอบข้อมูลวิชาเรียนพร้อมวันเวลาห้องเรียน
+    const scheduledCourses = studentEnrollments.map(e => {
+      const courseCode = e.course_code || (appState.courses.find(c => c.id === e.course)?.course_code) || 'GEN101';
+      const courseObj = appState.courses.find(c => c.course_code === courseCode || c.id === e.course);
+      const courseName = e.course_name || courseObj?.name || 'รายวิชาทั่วไป';
+      const credits = e.course_credits || courseObj?.credits || 3;
+      const slotInfo = getCourseScheduleSlot(courseCode);
+      const instructorName = courseObj?.instructor_name || slotInfo.instructor;
+
+      return {
+        ...e,
+        courseCode,
+        courseName,
+        credits,
+        instructorName,
+        schedule: slotInfo,
+      };
+    });
+
+    // 5. อัปเดตข้อมูลบน Header และ Chips สถิติ
+    const studentFullName = targetStudent.full_name || `${targetStudent.title || ''}${targetStudent.first_name || ''} ${targetStudent.last_name || ''}`.trim() || 'นิสิต';
+    const deptName = targetStudent.department_name || (appState.departments.find(d => d.id === targetStudent.department)?.name) || 'วิศวกรรมคอมพิวเตอร์';
+    const totalCredits = scheduledCourses.reduce((sum, c) => sum + (Number(c.credits) || 0), 0);
+
+    const nameEl = document.getElementById('schedule-header-student-name');
+    if (nameEl) nameEl.textContent = `ตารางเรียน: ${studentFullName}`;
+
+    const descEl = document.getElementById('schedule-header-student-desc');
+    if (descEl) descEl.textContent = `รหัสนักศึกษา ${targetStudent.student_id || '-'} | ภาควิชา ${deptName} | ภาคการศึกษา 1/2569`;
+
+    const statIdEl = document.getElementById('schedule-stat-id');
+    if (statIdEl) statIdEl.textContent = targetStudent.student_id || '-';
+
+    const statDeptEl = document.getElementById('schedule-stat-dept');
+    if (statDeptEl) statDeptEl.textContent = deptName;
+
+    const statCoursesEl = document.getElementById('schedule-stat-courses');
+    if (statCoursesEl) statCoursesEl.textContent = `${scheduledCourses.length} วิชา`;
+
+    const statCreditsEl = document.getElementById('schedule-stat-credits');
+    if (statCreditsEl) statCreditsEl.textContent = `${totalCredits} หน่วยกิต`;
+
+    // 6. เรนเดอร์ตารางเรียนประจำสัปดาห์ (Weekly Timetable Grid)
+    renderTimetableGrid(scheduledCourses);
+
+    // 7. เรนเดอร์การ์ดสรุปรายการวิชาที่ลงทะเบียน
+    renderScheduleCoursesList(scheduledCourses);
+
+  } catch (err) {
+    console.error('Error loading schedule:', err);
+  }
+}
+
+/**
+ * เรนเดอร์ช่องตารางเรียน 5 วัน (จันทร์ - ศุกร์)
+ */
+function renderTimetableGrid(scheduledCourses) {
+  const tbody = document.getElementById('schedule-table-body');
+  if (!tbody) return;
+
+  const days = [
+    { num: 1, name: 'วันจันทร์', en: 'Monday', badge: 'bg-amber-100 text-amber-900 border-amber-300' },
+    { num: 2, name: 'วันอังคาร', en: 'Tuesday', badge: 'bg-pink-100 text-pink-900 border-pink-300' },
+    { num: 3, name: 'วันพุธ', en: 'Wednesday', badge: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+    { num: 4, name: 'วันพฤหัสบดี', en: 'Thursday', badge: 'bg-orange-100 text-orange-900 border-orange-300' },
+    { num: 5, name: 'วันศุกร์', en: 'Friday', badge: 'bg-sky-100 text-sky-900 border-sky-300' },
+  ];
+
+  tbody.innerHTML = days.map(d => {
+    // หาวิชาที่เรียนวันและช่วงเวลานี้
+    const morningCourse = scheduledCourses.find(c => c.schedule.day === d.num && c.schedule.slot === 'morning');
+    const afternoonCourse = scheduledCourses.find(c => c.schedule.day === d.num && c.schedule.slot === 'afternoon');
+
+    return `
+      <tr class="hover:bg-slate-50/60 transition-colors">
+        <!-- Day Badge Column -->
+        <td class="py-3 px-3 font-semibold align-middle">
+          <div class="inline-flex flex-col px-2.5 py-1.5 rounded-xl border ${d.badge} shadow-2xs">
+            <span class="text-xs font-bold leading-tight">${d.name}</span>
+            <span class="text-[10px] font-normal opacity-75">${d.en}</span>
+          </div>
+        </td>
+
+        <!-- 08:00 - 09:00 (Activity / Prep) -->
+        <td class="py-3 px-2 text-center border-l border-slate-100 text-slate-300 text-xs">
+          -
+        </td>
+
+        <!-- 09:00 - 12:00 (Morning Slot) -->
+        <td class="p-2 border-l border-slate-100 align-middle">
+          ${renderScheduleSlotCard(morningCourse, 'morning')}
+        </td>
+
+        <!-- 12:00 - 13:00 (Lunch Break) -->
+        <td class="py-3 px-2 text-center border-l border-slate-100 bg-amber-50/20 text-slate-400 text-[11px] font-medium">
+          <span class="opacity-70">🍱 พัก</span>
+        </td>
+
+        <!-- 13:00 - 16:00 (Afternoon Slot) -->
+        <td class="p-2 border-l border-slate-100 align-middle">
+          ${renderScheduleSlotCard(afternoonCourse, 'afternoon')}
+        </td>
+
+        <!-- 16:00 - 17:00 (Consultation) -->
+        <td class="py-3 px-2 text-center border-l border-slate-100 text-slate-300 text-xs">
+          -
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * เรนเดอร์การ์ดวิชาเรียนในแต่ละช่องของตาราง
+ */
+function renderScheduleSlotCard(course, slotType) {
+  if (!course) {
+    return `
+      <div class="h-20 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 flex items-center justify-center text-slate-300 text-xs">
+        <span class="italic">ไม่มีวิชาเรียน</span>
+      </div>
+    `;
+  }
+
+  const colorStyles = {
+    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-900 border-l-4 border-l-indigo-600',
+    cyan: 'bg-cyan-50 border-cyan-200 text-cyan-900 border-l-4 border-l-cyan-600',
+    purple: 'bg-purple-50 border-purple-200 text-purple-900 border-l-4 border-l-purple-600',
+    amber: 'bg-amber-50 border-amber-200 text-amber-900 border-l-4 border-l-amber-600',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-900 border-l-4 border-l-emerald-600',
+    pink: 'bg-pink-50 border-pink-200 text-pink-900 border-l-4 border-l-pink-600',
+  };
+
+  const style = colorStyles[course.schedule.color] || colorStyles.indigo;
+
+  return `
+    <div class="p-2.5 rounded-xl border ${style} shadow-2xs hover:shadow-md transition-all duration-200">
+      <div class="flex items-center justify-between gap-1 mb-1">
+        <span class="font-bold text-xs font-mono tracking-tight">${course.courseCode}</span>
+        <span class="text-[10px] font-semibold bg-white/80 px-1.5 py-0.5 rounded shadow-2xs border border-black/5">
+          ${course.credits} หน่วยกิต
+        </span>
+      </div>
+      <div class="font-medium text-xs leading-snug line-clamp-1 mb-1.5" title="${course.courseName}">
+        ${course.courseName}
+      </div>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] opacity-80 pt-1 border-t border-black/5">
+        <span class="flex items-center gap-1 font-semibold">
+          <i class="fa-solid fa-location-dot text-indigo-500"></i> ${course.schedule.room}
+        </span>
+        <span class="flex items-center gap-1 text-[10px] truncate max-w-[140px]" title="${course.instructorName}">
+          <i class="fa-solid fa-user-tie opacity-70"></i> ${course.instructorName}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * เรนเดอร์การ์ดสรุปวิชาทั้งหมดที่ลงทะเบียนเรียน
+ */
+function renderScheduleCoursesList(scheduledCourses) {
+  const container = document.getElementById('schedule-courses-list');
+  if (!container) return;
+
+  if (scheduledCourses.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-8 text-center text-slate-400">
+        <i class="fa-solid fa-calendar-xmark text-3xl mb-2 block opacity-40"></i>
+        <span>ยังไม่มีวิชาที่ลงทะเบียนในภาคการศึกษานี้</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = scheduledCourses.map(c => `
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-300 transition-all flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-bold text-indigo-600 font-mono text-sm">${c.courseCode}</span>
+          <span class="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
+            ${c.credits} หน่วยกิต
+          </span>
+        </div>
+        <h5 class="font-bold text-slate-800 text-xs mb-2">${c.courseName}</h5>
+      </div>
+
+      <div class="space-y-1.5 pt-3 border-t border-slate-100 text-xs text-slate-600">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-clock text-indigo-500 w-4 text-center"></i>
+          <span>${c.schedule.dayName} เวลา ${c.schedule.time}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-door-open text-emerald-500 w-4 text-center"></i>
+          <span>${c.schedule.room}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-purple-500 w-4 text-center"></i>
+          <span class="truncate">${c.instructorName}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
