@@ -274,6 +274,10 @@ function initEventListeners() {
 
     const autoUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user${Date.now()}`;
 
+    const phone = document.getElementById('reg-phone')?.value.trim() || '';
+    const dob = document.getElementById('reg-dob')?.value || '';
+    const gender = document.querySelector('input[name="reg-gender"]:checked')?.value || 'M';
+
     const data = {
       email: email,
       username: autoUsername,
@@ -281,6 +285,9 @@ function initEventListeners() {
       last_name: lName,
       password: p1,
       password_confirm: p2,
+      phone: phone,
+      date_of_birth: dob,
+      gender: gender,
     };
 
     const submitBtn = e.target.querySelector('button[type="submit"]');

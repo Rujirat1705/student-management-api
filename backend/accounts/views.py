@@ -35,16 +35,21 @@ class RegisterView(generics.CreateAPIView):
             if not dept:
                 dept = Department.objects.create(code='CPE', name='วิศวกรรมคอมพิวเตอร์', faculty='คณะวิศวกรรมศาสตร์')
             advisor = Teacher.objects.first()
+            phone = request.data.get('phone', '0890000000') or '0890000000'
+            date_of_birth = request.data.get('date_of_birth', '2005-01-01') or '2005-01-01'
+            gender = request.data.get('gender', 'M') or 'M'
+            # title ตามเพศ
+            title = 'นางสาว' if gender == 'F' else 'นาย'
             Student.objects.update_or_create(
                 email=user.email,
                 defaults={
                     'student_id': user.username,
-                    'title': 'นาย',
+                    'title': title,
                     'first_name': user.first_name or user.username,
                     'last_name': user.last_name or '',
-                    'gender': 'M',
-                    'date_of_birth': '2005-01-01',
-                    'phone': '0890000000',
+                    'gender': gender,
+                    'date_of_birth': date_of_birth,
+                    'phone': phone,
                     'department': dept,
                     'advisor': advisor,
                     'year_level': 1,
@@ -52,7 +57,7 @@ class RegisterView(generics.CreateAPIView):
                     'gpa': 0.00
                 }
             )
-        except Exception as e:
+        except Exception:
             pass
 
         # สร้าง JWT token สำหรับผู้ใช้ใหม่ทันที
