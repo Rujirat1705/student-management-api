@@ -11,22 +11,30 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE('กำลังสร้างข้อมูลตัวอย่าง...'))
 
         # 1. สร้างผู้ดูแลระบบ (Admin)
-        if not User.objects.filter(username='admin').exists():
-            admin_user = User.objects.create_superuser('admin', 'admin@ok.prolay', 'admin1234')
-            admin_user.first_name = 'ผู้ดูแล'
-            admin_user.last_name = 'ระบบกลาง'
-            admin_user.save()
+        admin_user, admin_created = User.objects.get_or_create(username='admin')
+        admin_user.email = 'admin@ok.prolay'
+        admin_user.set_password('admin1234')
+        admin_user.first_name = 'ผู้ดูแล'
+        admin_user.last_name = 'ระบบกลาง'
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.save()
+        if admin_created:
             self.stdout.write(self.style.SUCCESS('สร้าง Superuser สำเร็จ: admin / admin1234'))
         else:
-            self.stdout.write('มี Superuser admin อยู่แล้ว')
+            self.stdout.write('อัปเดต Superuser สำเร็จ: admin / admin1234')
 
-        # สร้างผู้ใช้ทั่วไปตัวอย่าง
-        if not User.objects.filter(username='student1').exists():
-            std_user = User.objects.create_user('student1', 'student1@ok.prolay', 'password1234')
-            std_user.first_name = 'ภานุพงศ์'
-            std_user.last_name = 'มณีโรจน์'
-            std_user.save()
-            self.stdout.write(self.style.SUCCESS('สร้างผู้ใช้งานตัวอย่าง: student1 / password1234'))
+        # สร้างผู้ใช้ทั่วไปตัวอย่าง (student1)
+        std_user, std_created = User.objects.get_or_create(username='student1')
+        std_user.email = 'student1@ok.prolay'
+        std_user.set_password('student1234')
+        std_user.first_name = 'สมชาย'
+        std_user.last_name = 'ใจดี'
+        std_user.save()
+        if std_created:
+            self.stdout.write(self.style.SUCCESS('สร้างผู้ใช้งานตัวอย่าง: student1 / student1234'))
+        else:
+            self.stdout.write('อัปเดตผู้ใช้งานตัวอย่าง: student1 / student1234')
 
         # 2. สร้างภาควิชา
         departments_data = [

@@ -1,0 +1,32 @@
+backend
+ cd backend
+ python manage.py shell
+
+frontend
+ cd frontend
+ python -m http.server 3000
+
+ แล้วเข้าURLนี้ http://127.0.0.1:3000/
+
+อันนี้หน้าแอดมินของDjango
+ชื่อผู้ใช้ admin
+รหัส admin1234
+ http://127.0.0.1:8000/admin/
+
+Postman(เผื่ออยากเช็คเองด้วยอีกที)
+post http://127.0.0.1:8000/api/auth/login/  ##หา"access"ไปใส่Authorizatin ในช่อง Bearer Token
+body ของadmin
+{
+  "username": "admin",
+  "password": "admin1234"
+}
+ ของนิสิต 
+{ 
+    "username": "student1@ok.prolay", 
+    "password": "student1234"
+}
+
+ทดสอบ เปลี่ยนข้อมูล
+PATCH http://127.0.0.1:8000/api/students/1/ ##ใช้เหมือนกันทั้งนิสิตและอาจารย์เปลี่ยนแค่ key ใน Authorizatin อย่างเดียว
+นิสิตจะขึ้น 403 Forbidden
+admin 200 OK
