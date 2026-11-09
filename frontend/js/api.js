@@ -128,8 +128,16 @@ class ApiService {
 
       const data = await response.json();
       if (!response.ok) {
-        const errorMsg = data.detail || data.error || (typeof data === 'object' ? JSON.stringify(data) : 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
-        throw new Error(errorMsg);
+        let errorMsg = data.detail || data.error || data.message;
+        if (!errorMsg && typeof data === 'object') {
+          const messages = [];
+          for (const [k, v] of Object.entries(data)) {
+            const fieldText = Array.isArray(v) ? v.join(', ') : (typeof v === 'string' ? v : JSON.stringify(v));
+            messages.push(`${k === 'non_field_errors' ? '' : k + ': '}${fieldText}`);
+          }
+          errorMsg = messages.join(' | ') || 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+        }
+        throw new Error(errorMsg || 'เกิดข้อผิดพลาดในการส่งข้อมูล');
       }
       return data;
     } catch (error) {

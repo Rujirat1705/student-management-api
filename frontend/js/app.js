@@ -35,18 +35,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   updateServerStatusUI();
 
-  // โหลดข้อมูลพื้นฐานและตรวจสอบสิทธิ์
-  if (window.smsApi && window.smsApi.isAuthenticated()) {
+  // ตรวจสอบสิทธิ์การเข้าสู่ระบบ
+  const isAuth = window.smsApi && window.smsApi.isAuthenticated();
+  if (isAuth) {
     await loadBaseData();
-    await loadDashboard();
-  } else {
     switchTab('dashboard');
+  } else {
+    // บังคับซ่อนทุกแท็บและแสดงหน้าจอล็อกอย่างเด็ดขาด
+    document.querySelectorAll('.tab-content').forEach(sec => {
+      sec.classList.add('hidden');
+      sec.classList.remove('active');
+    });
+    const lock = document.getElementById('auth-lock-screen');
+    if (lock) lock.classList.remove('hidden');
+    document.getElementById('page-title').textContent = 'เข้าสู่ระบบก่อนนะจ่ะ';
+    document.getElementById('page-subtitle').textContent = 'กรุณาเข้าสู่ระบบด้วยบัญชีแอดมินหรือบัญชีนักศึกษาเพื่อเข้าถึงและจัดการข้อมูลในหน้านี้';
   }
 });
 
 // =================== TAB NAVIGATION ===================
 function switchTab(tabName) {
   appState.currentTab = tabName;
+
+  const authLockScreen = document.getElementById('auth-lock-screen');
+  const isAuth = window.smsApi && window.smsApi.isAuthenticated();
 
   // ปรับการเน้นปุ่มบน Sidebar
   document.querySelectorAll('.nav-item').forEach(btn => {
@@ -57,16 +69,30 @@ function switchTab(tabName) {
     }
   });
 
-  // ปรับการแสดง Section
+  // ซ่อนเนื้อหาทุกแท็บ
   document.querySelectorAll('.tab-content').forEach(sec => {
     sec.classList.add('hidden');
     sec.classList.remove('active');
   });
 
-  const authLockScreen = document.getElementById('auth-lock-screen');
-  const isAuth = window.smsApi && window.smsApi.isAuthenticated();
+  // หากยังไม่เข้าสู่ระบบ: บังคับแสดงหน้าจอล็อกทุกหน้า และไม่อนุญาตให้โหลดข้อมูลใดๆ
+  if (!isAuth) {
+    if (authLockScreen) authLockScreen.classList.remove('hidden');
+    document.getElementById('page-title').textContent = 'เข้าสู่ระบบก่อนนะจ่ะ';
+    document.getElementById('page-subtitle').textContent = 'กรุณาเข้าสู่ระบบด้วยบัญชีแอดมินหรือบัญชีนักศึกษาเพื่อเข้าถึงและจัดการข้อมูลในหน้านี้';
+    return;
+  }
 
-  // ปรับ Title บน Header
+  // หากเข้าสู่ระบบแล้ว: ซ่อนหน้าจอล็อก และแสดงแท็บที่เลือก
+  if (authLockScreen) authLockScreen.classList.add('hidden');
+
+  const activeSec = document.getElementById(`tab-${tabName}`);
+  if (activeSec) {
+    activeSec.classList.remove('hidden');
+    activeSec.classList.add('active');
+  }
+
+  // ปรับ Title บน Header ตามแต่ละแท็บ
   const titles = {
     'dashboard': { title: 'ภาพรวมสถิติระบบ (Dashboard)', subtitle: 'รายงานสรุปข้อมูลนักศึกษาและการลงทะเบียนเรียนแบบเรียลไทม์' },
     'students': { title: 'จัดการข้อมูลนักศึกษา (Students)', subtitle: 'ค้นหา เพิ่ม แก้ไข ลบข้อมูลนักศึกษา และคำนวณ GPA สะสม' },
@@ -81,22 +107,7 @@ function switchTab(tabName) {
     document.getElementById('page-subtitle').textContent = titles[tabName].subtitle;
   }
 
-  // หากยังไม่เข้าสู่ระบบ ให้แสดงหน้าจอล็อกทุกหน้า
-  if (!isAuth) {
-    if (authLockScreen) authLockScreen.classList.remove('hidden');
-    return;
-  }
-
-  // หากเข้าสู่ระบบแล้ว ซ่อนหน้าจอล็อกและแสดงเนื้อหาแท็บ
-  if (authLockScreen) authLockScreen.classList.add('hidden');
-
-  const activeSec = document.getElementById(`tab-${tabName}`);
-  if (activeSec) {
-    activeSec.classList.remove('hidden');
-    activeSec.classList.add('active');
-  }
-
-  // โหลดข้อมูลตามแต่ละแท็บ
+  // โหลดข้อมูลตามแต่ละแท็บ (เฉพาะเมื่อล็อกอินแล้วเท่านั้น)
   switch (tabName) {
     case 'dashboard':
       loadDashboard();
@@ -133,6 +144,12 @@ function initEventListeners() {
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const tab = btn.getAttribute('data-tab');
+      const isAuth = window.smsApi && window.smsApi.isAuthenticated();
+      if (!isAuth) {
+        showToast('warning', 'เข้าสู่ระบบก่อนนะจ่ะ');
+        openModal('modal-login');
+        return;
+      }
       switchTab(tab);
     });
   });
@@ -231,24 +248,47 @@ function initEventListeners() {
       return Swal.fire('รูปแบบรหัสผ่านไม่ถูกต้อง', 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว', 'warning');
     }
 
-    const email = document.getElementById('reg-email').value.trim();
+    const emailInput = document.getElementById('reg-email');
+    const email = emailInput ? emailInput.value.trim() : '';
+    if (!email) {
+      return Swal.fire('กรุณากรอกอีเมล', 'กรุณาระบุอีเมลที่ต้องการใช้งาน', 'warning');
+    }
+
+    const regUserEl = document.getElementById('reg-username');
+    const autoUsername = (regUserEl && regUserEl.value.trim()) || email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user${Date.now()}`;
+    const firstNameEl = document.getElementById('reg-first-name');
+    const lastNameEl = document.getElementById('reg-last-name');
+
     const data = {
       email: email,
-      username: email.split('@')[0],
-      first_name: document.getElementById('reg-first-name').value.trim(),
-      last_name: document.getElementById('reg-last-name').value.trim(),
+      username: autoUsername,
+      first_name: firstNameEl ? firstNameEl.value.trim() : '',
+      last_name: lastNameEl ? lastNameEl.value.trim() : '',
       password: p1,
       password_confirm: p2,
     };
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังสมัคร...';
+    }
+
     try {
       await window.smsApi.register(data);
       closeModal('modal-register');
       updateAuthUI();
       await loadBaseData();
-      switchTab(appState.currentTab);
+      switchTab('dashboard');
       showToast('success', 'สมัครสมาชิกสำเร็จ! เข้าสู่ระบบให้อัตโนมัติ');
     } catch (err) {
       Swal.fire('สมัครสมาชิกไม่สำเร็จ', err.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     }
   });
 

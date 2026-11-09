@@ -10,7 +10,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Serializer สำหรับ Login โดยรองรับทั้ง Email และ Username
     """
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
+        username_or_email = (attrs.get('username') or '').strip()
         if username_or_email:
             user = User.objects.filter(
                 Q(email__iexact=username_or_email) | Q(username__iexact=username_or_email)
@@ -51,28 +51,26 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'password', 'password_confirm', 'first_name', 'last_name')
         extra_kwargs = {
-            'first_name': {'required': False},
-            'last_name': {'required': False},
+            'first_name': {'required': False, 'allow_blank': True},
+            'last_name': {'required': False, 'allow_blank': True},
             'email': {'required': True},
         }
 
     def validate(self, attrs):
         if attrs.get('password') != attrs.get('password_confirm'):
             raise serializers.ValidationError({"password": "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน"})
-        if User.objects.filter(email=attrs.get('email')).exists():
+        if User.objects.filter(email__iexact=attrs.get('email', '').strip()).exists():
             raise serializers.ValidationError({"email": "อีเมลนี้มีผู้ใช้งานในระบบแล้ว"})
 
-        # หากไม่ได้กรอก username ให้ดึงจาก email อัตโนมัติ
-        if not attrs.get('username'):
-            base_username = attrs['email'].split('@')[0]
-            username = base_username
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
-            attrs['username'] = username
-        elif User.objects.filter(username=attrs.get('username')).exists():
-            raise serializers.ValidationError({"username": "ชื่อผู้ใช้นี้มีอยู่ในระบบแล้ว"})
+        # สร้าง username อัตโนมัติจาก email ให้ปลอดภัยและไม่ซ้ำในระบบ
+        raw_user = (attrs.get('username') or attrs['email'].split('@')[0]).strip()
+        clean_user = "".join(c for c in raw_user if c.isalnum() or c in ['_', '.']) or 'user'
+        username = clean_user
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{clean_user}{counter}"
+            counter += 1
+        attrs['username'] = username
 
         return attrs
 
@@ -80,7 +78,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data['email'],
+            email=validated_data['email'].strip().lower(),
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', '')
